@@ -569,6 +569,82 @@
                 `;
                 
                 queue.prepend(jobEl);
+
+                // Trigger actual browser printing
+                this.executeActualPrint(data);
+            },
+
+            executeActualPrint(data) {
+                // Create a hidden iframe to handle the printing without changing the current page
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+
+                const fileType = data.fileType || '';
+                const isImage = fileType.startsWith('image/');
+                const isPDF = fileType === 'application/pdf';
+
+                if (isPDF) {
+                    iframe.src = data.fileData;
+                    iframe.onload = () => {
+                        // Small delay to ensure PDF is fully rendered in the iframe
+                        setTimeout(() => {
+                            try {
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Auto-print blocked or failed', e);
+                                this.showToast('Auto-print blocked by browser. Please print manually.', 'error');
+                            }
+                            setTimeout(() => document.body.removeChild(iframe), 10000);
+                        }, 1000);
+                    };
+                } else if (isImage) {
+                    // For images, we construct an HTML document inside the iframe to apply orientation/size
+                    const img = new Image();
+                    img.src = data.fileData;
+                    img.onload = () => {
+                        const doc = iframe.contentWindow.document;
+                        doc.open();
+                        doc.write(`
+                            <html>
+                                <head>
+                                    <style>
+                                        @page { 
+                                            size: ${data.settings.paperSize || 'A4'} ${data.settings.orientation || 'portrait'}; 
+                                            margin: 0; 
+                                        }
+                                        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                                        img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <img src="${data.fileData}" />
+                                </body>
+                            </html>
+                        `);
+                        doc.close();
+                        
+                        setTimeout(() => {
+                            try {
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Auto-print failed', e);
+                            }
+                            setTimeout(() => document.body.removeChild(iframe), 10000);
+                        }, 500);
+                    };
+                } else {
+                    // Browsers cannot natively print Word documents via window.print()
+                    // So we trigger a download on the host machine instead.
+                    this.showToast('Cannot auto-print Word docs. Downloading instead...', 'warning');
+                    const a = document.createElement('a');
+                    a.href = data.fileData;
+                    a.download = data.fileName;
+                    a.click();
+                    document.body.removeChild(iframe);
+                }
             },
 
             // --- Client Functions ---
