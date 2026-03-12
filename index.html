@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskPrint - P2P Printer Sharing</title>
+    <!-- Use the requested icon as favicon -->
+    <link rel="icon" type="image/png" href="https://cdn.iconscout.com/icon/free/png-256/free-printer-icon-download-in-svg-png-gif-formats--print-machine-hardware-device-pack-network-communication-icons-1093488.png" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖨️</text></svg>'">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- P2P and QR Libraries -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0b1120',
+                        glass: 'rgba(17, 25, 40, 0.75)',
+                        glassBorder: 'rgba(255, 255, 255, 0.125)',
+                        primary: '#3b82f6',
+                        secondary: '#56b6ff',
+                        accent: '#2dd4bf'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b1120;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(45, 212, 191, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-glass {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .input-glass:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        #reader { width: 100%; border-radius: 0.5rem; overflow: hidden; border: none !important; }
+        #reader video { object-fit: cover; border-radius: 0.5rem; }
+        
+        /* Toast Animation */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 md:p-8">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex items-center justify-between mb-8 z-10 glass-panel rounded-2xl p-4">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="app.resetToHome()">
+            <!-- Logo Image with Fallback -->
+            <img src="https://cdn.iconscout.com/icon/free/png-256/free-printer-icon-download-in-svg-png-gif-formats--print-machine-hardware-device-pack-network-communication-icons-1093488.png" 
+                 onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 256 256%22><path fill=%22%2356b6ff%22 d=%22M208,80H184V40a8,8,0,0,0-8-8H80a8,8,0,0,0-8,8V80H48A24,24,0,0,0,24,104v64a24,24,0,0,0,24,24H72v24a8,8,0,0,0,8,8h96a8,8,0,0,0,8-8V192h24a24,24,0,0,0,24-24V104A24,24,0,0,0,208,80ZM88,48h80V80H88ZM168,208H88V160h80Zm40-32H184V152a8,8,0,0,0-8-8H80a8,8,0,0,0-8,8v24H48a8,8,0,0,1-8-8V104a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8v64A8,8,0,0,1,208,176Zm-16-48a12,12,0,1,1-12-12A12,12,0,0,1,192,128Z%22></path></svg>';" 
+                 alt="TaskPrint Logo" 
+                 class="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Task<span class="text-secondary">Print</span></h1>
+        </div>
+        <div id="status-badge" class="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium transition-all">
+            <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+            <span id="status-text">Connected</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="w-full max-w-4xl flex-grow flex flex-col items-center justify-center relative z-10 w-full">
+        
+        <!-- View: Home -->
+        <div id="view-home" class="w-full max-w-md w-full glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-6 transition-all duration-300">
+            <div class="text-center space-y-2">
+                <h2 class="text-xl font-semibold">Welcome to TaskPrint</h2>
+                <p class="text-sm text-gray-400">Direct P2P printing. No servers, no tracking.</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1 ml-1">Your Nickname</label>
+                    <div class="relative">
+                        <i class="ph ph-user absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="nickname" placeholder="e.g., Office PC, John's Phone" class="w-full pl-10 pr-4 py-3 rounded-xl input-glass focus:ring-2 focus:ring-primary outline-none transition-all" maxlength="20">
+                    </div>
+                </div>
+
+                <div class="h-px w-full bg-white/10 my-6"></div>
+
+                <!-- Host Action -->
+                <button onclick="app.hostSession()" class="w-full btn-primary text-white font-medium py-3.5 px-4 rounded-xl flex items-center justify-center gap-2">
+                    <i class="ph ph-printer text-xl"></i>
+                    Host a Printer
+                </button>
+
+                <div class="relative flex items-center py-2">
+                    <div class="flex-grow border-t border-white/10"></div>
+                    <span class="flex-shrink-0 mx-4 text-gray-500 text-sm">OR</span>
+                    <div class="flex-grow border-t border-white/10"></div>
+                </div>
+
+                <!-- Join Action -->
+                <div class="flex gap-2">
+                    <div class="relative flex-grow">
+                        <i class="ph ph-keyboard absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="join-code" placeholder="5-Digit Code" class="w-full pl-10 pr-4 py-3.5 rounded-xl input-glass font-mono text-center tracking-widest text-lg" maxlength="5">
+                    </div>
+                    <button onclick="app.joinSession()" class="btn-glass text-white font-medium px-6 rounded-xl flex items-center justify-center hover:text-primary transition-colors">
+                        Join
+                    </button>
+                </div>
+                
+                <button onclick="app.showScanner()" class="w-full btn-glass text-gray-300 text-sm font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 mt-2">
+                    <i class="ph ph-qr-code text-lg"></i>
+                    Scan QR Code
+                </button>
+            </div>
+            
+            <div id="recent-connections" class="hidden mt-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2 ml-1">Recent</p>
+                <div id="recent-list" class="flex gap-2 flex-wrap">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Host -->
+        <div id="view-host" class="w-full glass-panel rounded-3xl p-6 sm:p-8 hidden transition-all duration-300 flex flex-col md:flex-row gap-8">
+            <!-- Left: Connection Info -->
+            <div class="flex-1 flex flex-col items-center justify-center space-y-6 md:border-r md:border-white/10 md:pr-8">
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold mb-1">Ready to Print</h2>
+                    <p class="text-gray-400 text-sm">Waiting for devices to connect...</p>
+                </div>
+
+                <div class="bg-gray-900/60 p-6 rounded-2xl border border-white/5 flex flex-col items-center gap-4">
+                    <div id="qrcode" class="bg-white p-3 rounded-xl shadow-lg"></div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400 mb-1">Share this code</p>
+                        <p id="display-code" class="text-4xl font-mono tracking-widest font-bold text-secondary text-shadow">---</p>
+                    </div>
+                </div>
+
+                <button onclick="app.resetToHome()" class="text-red-400 hover:text-red-300 text-sm font-medium flex items-center gap-1 transition-colors">
+                    <i class="ph ph-x-circle"></i> Stop Hosting
+                </button>
+            </div>
+
+            <!-- Right: Activity & Clients -->
+            <div class="flex-1 flex flex-col h-full min-h-[300px]">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-lg flex items-center gap-2">
+                        <i class="ph ph-users text-primary"></i> 
+                        Connected Devices
+                        <span id="client-count" class="bg-white/10 text-xs py-0.5 px-2 rounded-full">0</span>
+                    </h3>
+                </div>
+                
+                <div id="client-list" class="flex-grow bg-black/20 rounded-xl border border-white/5 p-4 overflow-y-auto space-y-2 max-h-[150px] mb-4">
+                    <p class="text-gray-500 text-sm text-center italic mt-4">No devices connected yet.</p>
+                </div>
+
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-lg flex items-center gap-2">
+                        <i class="ph ph-stack text-accent"></i> 
+                        Print Queue
+                    </h3>
+                </div>
+
+                <div id="print-queue" class="flex-grow bg-black/20 rounded-xl border border-white/5 p-4 overflow-y-auto space-y-3 max-h-[250px]">
+                    <p class="text-gray-500 text-sm text-center italic mt-4">Queue is empty.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Client (Print Interface) -->
+        <div id="view-client" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 hidden transition-all duration-300">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                <div>
+                    <h2 class="text-xl font-bold">Print Document</h2>
+                    <p id="connected-host-name" class="text-sm text-accent flex items-center gap-1 mt-1">
+                        <i class="ph ph-check-circle"></i> Connected
+                    </p>
+                </div>
+                <button onclick="app.resetToHome()" class="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Disconnect">
+                    <i class="ph ph-plugs text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- File Attachment -->
+                <div class="w-full">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Select File</label>
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onchange="app.handleFileSelect(event)">
+                    <button onclick="document.getElementById('file-input').click()" id="file-btn" class="w-full border-2 border-dashed border-gray-600 hover:border-primary bg-black/20 rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors group">
+                        <div class="w-12 h-12 rounded-full bg-white/5 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                            <i class="ph ph-upload-simple text-2xl text-gray-400 group-hover:text-primary"></i>
+                        </div>
+                        <div class="text-center">
+                            <p class="font-medium text-gray-200" id="file-name-display">Click to browse files</p>
+                            <p class="text-xs text-gray-500 mt-1">PDF, Word, or Images up to 20MB</p>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Settings -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Orientation</label>
+                        <div class="flex p-1 bg-black/30 rounded-lg border border-white/5">
+                            <button onclick="app.setOrientation('portrait')" id="btn-portrait" class="flex-1 py-1.5 text-sm rounded-md bg-white/10 text-white shadow-sm transition-all flex items-center justify-center gap-1">
+                                <i class="ph ph-file"></i> Portrait
+                            </button>
+                            <button onclick="app.setOrientation('landscape')" id="btn-landscape" class="flex-1 py-1.5 text-sm rounded-md text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1">
+                                <i class="ph ph-image"></i> Landscape
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Paper Size</label>
+                        <select id="paper-size" class="w-full bg-black/30 border border-white/5 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-primary appearance-none cursor-pointer">
+                            <option value="A4">A4 (Standard)</option>
+                            <option value="Letter">US Letter</option>
+                            <option value="Legal">Legal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Send Action -->
+                <button onclick="app.sendPrintJob()" id="send-btn" class="w-full btn-primary text-white font-medium py-4 px-4 rounded-xl flex items-center justify-center gap-2 mt-4 opacity-50 cursor-not-allowed" disabled>
+                    <i class="ph ph-paper-plane-tilt text-xl"></i>
+                    Send to Printer
+                </button>
+            </div>
+            
+            <!-- Progress Overlay -->
+            <div id="upload-progress" class="hidden absolute inset-0 bg-dark/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center z-20">
+                <div class="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+                <p class="text-white font-medium">Sending to host...</p>
+                <p class="text-xs text-gray-400 mt-1" id="upload-status">0%</p>
+            </div>
+        </div>
+
+        <!-- View: Scanner -->
+        <div id="view-scanner" class="w-full max-w-md glass-panel rounded-3xl p-6 hidden flex flex-col gap-4 transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold">Scan QR Code</h2>
+                <button onclick="app.closeScanner()" class="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div id="reader-container" class="bg-black/50 rounded-xl overflow-hidden min-h-[300px] flex items-center justify-center border border-white/10">
+                <div id="reader"></div>
+            </div>
+            <p class="text-center text-sm text-gray-400">Point your camera at the Host's screen</p>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-4xl text-center text-gray-500 text-sm mt-8 z-10 pb-4">
+        <p class="mb-1">Developed With ❤️ By ROnakks Development & Gemini AI</p>
+        <p>Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" class="text-primary hover:underline hover:text-blue-400 transition-colors">GitHub</a></p>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Application Logic -->
+    <script>
+        const app = {
+            peer: null,
+            connections: [],
+            hostConn: null, // For client mode
+            isHost: false,
+            nickname: '',
+            currentCode: null,
+            qrCodeObj: null,
+            scanner: null,
+            selectedFile: null,
+            settings: {
+                orientation: 'portrait',
+                paperSize: 'A4'
+            },
+
+            init() {
+                // Check local storage for nickname
+                const savedName = localStorage.getItem('taskprint_nickname');
+                if (savedName) document.getElementById('nickname').value = savedName;
+
+                // Load recent connections
+                this.loadRecentConnections();
+
+                // Check URL for join code
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinCode = urlParams.get('join');
+                if (joinCode && joinCode.length === 5) {
+                    document.getElementById('join-code').value = joinCode;
+                    // Optional: auto-join if nickname exists
+                }
+            },
+
+            // --- UI Management ---
+
+            switchView(viewId) {
+                ['view-home', 'view-host', 'view-client', 'view-scanner'].forEach(id => {
+                    document.getElementById(id).classList.add('hidden');
+                });
+                document.getElementById(viewId).classList.remove('hidden');
+            },
+
+            updateStatus(isActive, text = 'Connected') {
+                const badge = document.getElementById('status-badge');
+                const badgeText = document.getElementById('status-text');
+                const dot = badge.querySelector('div');
+
+                if (isActive) {
+                    badge.classList.remove('hidden');
+                    badgeText.innerText = text;
+                    badge.classList.remove('bg-red-500/10', 'border-red-500/20', 'text-red-400');
+                    badge.classList.add('bg-blue-500/10', 'border-blue-500/20', 'text-blue-400');
+                    dot.classList.remove('bg-red-500');
+                    dot.classList.add('bg-blue-500', 'animate-pulse');
+                } else {
+                    badge.classList.remove('hidden');
+                    badgeText.innerText = 'Disconnected';
+                    badge.classList.remove('bg-blue-500/10', 'border-blue-500/20', 'text-blue-400');
+                    badge.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-400');
+                    dot.classList.remove('bg-blue-500', 'animate-pulse');
+                    dot.classList.add('bg-red-500');
+                    setTimeout(() => badge.classList.add('hidden'), 3000);
+                }
+            },
+
+            showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                
+                const bgColors = {
+                    info: 'bg-glass border-blue-500/30 text-white',
+                    success: 'bg-green-900/80 border-green-500/30 text-green-100',
+                    error: 'bg-red-900/80 border-red-500/30 text-red-100'
+                };
+                
+                const icons = {
+                    info: '<i class="ph ph-info text-blue-400 text-lg"></i>',
+                    success: '<i class="ph ph-check-circle text-green-400 text-lg"></i>',
+                    error: '<i class="ph ph-warning-circle text-red-400 text-lg"></i>'
+                };
+
+                toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-lg toast-enter ${bgColors[type]}`;
+                toast.innerHTML = `${icons[type]} <span>${message}</span>`;
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(10px)';
+                    toast.style.transition = 'all 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            },
+
+            // --- Host Functions ---
+
+            async hostSession() {
+                const nameInput = document.getElementById('nickname').value.trim();
+                if (!nameInput) return this.showToast('Please enter a nickname first', 'error');
+                
+                this.nickname = nameInput;
+                localStorage.setItem('taskprint_nickname', this.nickname);
+                this.isHost = true;
+                
+                const btn = event.currentTarget;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Starting...';
+                btn.disabled = true;
+
+                // Generate 5 digit code
+                this.currentCode = Math.floor(10000 + Math.random() * 90000).toString();
+                const peerId = `taskprint-p2p-${this.currentCode}`;
+
+                try {
+                    this.peer = new Peer(peerId, { debug: 2 });
+                    
+                    this.peer.on('open', (id) => {
+                        this.switchView('view-host');
+                        document.getElementById('display-code').innerText = this.currentCode;
+                        this.generateQR();
+                        this.updateStatus(true, 'Hosting');
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    });
+
+                    this.peer.on('error', (err) => {
+                        console.error(err);
+                        if (err.type === 'unavailable-id') {
+                            this.showToast('Code collision. Trying again...', 'warning');
+                            this.hostSession(); // Retry
+                        } else {
+                            this.showToast('Connection error. Try again.', 'error');
+                            this.resetToHome();
+                        }
+                    });
+
+                    this.peer.on('connection', (conn) => {
+                        this.handleHostConnection(conn);
+                    });
+
+                } catch (err) {
+                    this.showToast('Failed to start host session', 'error');
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            },
+
+            generateQR() {
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = '';
+                const joinUrl = `${window.location.origin}${window.location.pathname}?join=${this.currentCode}`;
+                
+                this.qrCodeObj = new QRCode(qrContainer, {
+                    text: joinUrl,
+                    width: 160,
+                    height: 160,
+                    colorDark : "#0b1120",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            },
+
+            handleHostConnection(conn) {
+                conn.on('open', () => {
+                    // Expect a join message to identify the client
+                    conn.on('data', (data) => {
+                        if (data.type === 'join') {
+                            conn.clientName = data.name;
+                            this.connections.push(conn);
+                            this.updateClientList();
+                            this.showToast(`${data.name} connected`, 'success');
+                            
+                            // Send welcome
+                            conn.send({ type: 'welcome', hostName: this.nickname });
+                        } 
+                        else if (data.type === 'print-job') {
+                            this.handlePrintJob(conn.clientName, data);
+                        }
+                    });
+                });
+
+                conn.on('close', () => {
+                    this.connections = this.connections.filter(c => c.peer !== conn.peer);
+                    this.updateClientList();
+                    this.showToast(`${conn.clientName || 'A device'} disconnected`, 'info');
+                });
+            },
+
+            updateClientList() {
+                document.getElementById('client-count').innerText = this.connections.length;
+                const list = document.getElementById('client-list');
+                
+                if (this.connections.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center italic mt-4">No devices connected yet.</p>';
+                    return;
+                }
+
+                list.innerHTML = this.connections.map(c => `
+                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                <i class="ph ph-device-mobile"></i>
+                            </div>
+                            <span class="font-medium text-sm">${c.clientName || 'Unknown Device'}</span>
+                        </div>
+                        <span class="text-xs text-green-400 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-green-400"></div> Active</span>
+                    </div>
+                `).join('');
+            },
+
+            handlePrintJob(clientName, data) {
+                // Simulate receiving and processing
+                console.log(`[TaskPrint] Received Job from ${clientName}:`, data.fileName);
+                console.log(`[TaskPrint] Settings: ${data.settings.orientation}, ${data.settings.paperSize}`);
+                
+                this.showToast(`Print job received from ${clientName}`, 'success');
+
+                const queue = document.getElementById('print-queue');
+                if (queue.querySelector('p.italic')) queue.innerHTML = ''; // Remove empty message
+
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Determine icon based on type
+                let icon = 'ph-file';
+                if(data.fileName.endsWith('.pdf')) icon = 'ph-file-pdf text-red-400';
+                else if(data.fileName.match(/\.(jpg|jpeg|png|gif)$/i)) icon = 'ph-image text-blue-400';
+                else if(data.fileName.match(/\.(doc|docx)$/i)) icon = 'ph-file-doc text-blue-600';
+
+                const jobEl = document.createElement('div');
+                jobEl.className = 'flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 slide-in';
+                jobEl.innerHTML = `
+                    <div class="text-2xl">${`<i class="ph ${icon}"></i>`}</div>
+                    <div class="flex-grow min-w-0">
+                        <p class="text-sm font-medium truncate text-gray-200">${data.fileName}</p>
+                        <p class="text-xs text-gray-500">${clientName} • ${data.settings.paperSize} • ${data.settings.orientation}</p>
+                    </div>
+                    <div class="text-xs text-gray-400 flex flex-col items-end">
+                        <span>${time}</span>
+                        <span class="text-accent mt-1 flex items-center gap-1"><i class="ph ph-check"></i> Printed</span>
+                    </div>
+                `;
+                
+                queue.prepend(jobEl);
+            },
+
+            // --- Client Functions ---
+
+            async joinSession(code = null) {
+                const nameInput = document.getElementById('nickname').value.trim();
+                if (!nameInput) return this.showToast('Please enter a nickname first', 'error');
+                
+                const joinCode = code || document.getElementById('join-code').value.trim();
+                if (joinCode.length !== 5) return this.showToast('Enter a valid 5-digit code', 'error');
+
+                this.nickname = nameInput;
+                localStorage.setItem('taskprint_nickname', this.nickname);
+                this.isHost = false;
+
+                const btn = event ? event.currentTarget : null;
+                if(btn) {
+                    btn.originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>';
+                    btn.disabled = true;
+                }
+
+                const targetId = `taskprint-p2p-${joinCode}`;
+                
+                try {
+                    this.peer = new Peer();
+                    
+                    this.peer.on('open', () => {
+                        this.hostConn = this.peer.connect(targetId, { reliable: true });
+                        
+                        this.hostConn.on('open', () => {
+                            // Save to recent
+                            this.saveRecentConnection(joinCode);
+                            
+                            this.switchView('view-client');
+                            this.updateStatus(true, 'Connected to Host');
+                            
+                            // Identify self
+                            this.hostConn.send({ type: 'join', name: this.nickname });
+                        });
+
+                        this.hostConn.on('data', (data) => {
+                            if(data.type === 'welcome') {
+                                document.getElementById('connected-host-name').innerHTML = `<i class="ph ph-check-circle"></i> Connected to ${data.hostName}`;
+                            }
+                        });
+
+                        this.hostConn.on('close', () => {
+                            this.showToast('Host disconnected', 'error');
+                            this.resetToHome();
+                        });
+
+                        this.hostConn.on('error', (err) => {
+                            this.showToast('Connection to host failed', 'error');
+                            if(btn) { btn.innerHTML = btn.originalHtml; btn.disabled = false; }
+                        });
+                    });
+
+                    this.peer.on('error', (err) => {
+                        console.error(err);
+                        this.showToast('Could not find host. Check code.', 'error');
+                        if(btn) { btn.innerHTML = btn.originalHtml; btn.disabled = false; }
+                    });
+
+                } catch (err) {
+                    this.showToast('Connection failed', 'error');
+                    if(btn) { btn.innerHTML = btn.originalHtml; btn.disabled = false; }
+                }
+            },
+
+            // --- Client Print Handling ---
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Max 20MB check
+                if (file.size > 20 * 1024 * 1024) {
+                    this.showToast('File too large (Max 20MB)', 'error');
+                    event.target.value = '';
+                    return;
+                }
+
+                this.selectedFile = file;
+                const sizeStr = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                
+                document.getElementById('file-name-display').innerHTML = `
+                    <span class="text-primary truncate block max-w-[200px]">${file.name}</span>
+                    <span class="text-gray-500 text-xs">${sizeStr}</span>
+                `;
+                
+                const btn = document.getElementById('send-btn');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            },
+
+            setOrientation(type) {
+                this.settings.orientation = type;
+                const btnP = document.getElementById('btn-portrait');
+                const btnL = document.getElementById('btn-landscape');
+                
+                if(type === 'portrait') {
+                    btnP.className = 'flex-1 py-1.5 text-sm rounded-md bg-white/10 text-white shadow-sm transition-all flex items-center justify-center gap-1';
+                    btnL.className = 'flex-1 py-1.5 text-sm rounded-md text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1';
+                } else {
+                    btnL.className = 'flex-1 py-1.5 text-sm rounded-md bg-white/10 text-white shadow-sm transition-all flex items-center justify-center gap-1';
+                    btnP.className = 'flex-1 py-1.5 text-sm rounded-md text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1';
+                }
+            },
+
+            sendPrintJob() {
+                if(!this.selectedFile || !this.hostConn || !this.hostConn.open) {
+                    this.showToast('Cannot send file. Check connection.', 'error');
+                    return;
+                }
+
+                this.settings.paperSize = document.getElementById('paper-size').value;
+                const overlay = document.getElementById('upload-progress');
+                overlay.classList.remove('hidden');
+
+                // Read file as Data URL to send
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    
+                    try {
+                        this.hostConn.send({
+                            type: 'print-job',
+                            fileName: this.selectedFile.name,
+                            fileType: this.selectedFile.type,
+                            fileData: dataUrl,
+                            settings: this.settings
+                        });
+                        
+                        setTimeout(() => {
+                            overlay.classList.add('hidden');
+                            this.showToast('Sent to printer successfully!', 'success');
+                            this.resetClientForm();
+                        }, 800); // Fake progress delay for UI feel
+                    } catch (err) {
+                        console.error(err);
+                        overlay.classList.add('hidden');
+                        this.showToast('Failed to send file. It might be too large.', 'error');
+                    }
+                };
+                reader.onerror = () => {
+                    overlay.classList.add('hidden');
+                    this.showToast('Error reading file', 'error');
+                };
+                
+                reader.readAsDataURL(this.selectedFile);
+            },
+
+            resetClientForm() {
+                this.selectedFile = null;
+                document.getElementById('file-input').value = '';
+                document.getElementById('file-name-display').innerHTML = `Click to browse files<p class="text-xs text-gray-500 mt-1">PDF, Word, or Images up to 20MB</p>`;
+                
+                const btn = document.getElementById('send-btn');
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            },
+
+            // --- Local Storage (Recent) ---
+            
+            saveRecentConnection(code) {
+                let recents = JSON.parse(localStorage.getItem('taskprint_recents') || '[]');
+                if(!recents.includes(code)) {
+                    recents.unshift(code);
+                    if(recents.length > 3) recents.pop(); // Keep last 3
+                    localStorage.setItem('taskprint_recents', JSON.stringify(recents));
+                }
+            },
+
+            loadRecentConnections() {
+                const recents = JSON.parse(localStorage.getItem('taskprint_recents') || '[]');
+                const container = document.getElementById('recent-connections');
+                const list = document.getElementById('recent-list');
+                
+                if(recents.length > 0) {
+                    container.classList.remove('hidden');
+                    list.innerHTML = recents.map(code => `
+                        <button onclick="document.getElementById('join-code').value='${code}'" class="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors font-mono">
+                            ${code}
+                        </button>
+                    `).join('');
+                } else {
+                    container.classList.add('hidden');
+                }
+            },
+
+            // --- QR Scanner ---
+
+            showScanner() {
+                this.switchView('view-scanner');
+                if(!this.scanner) {
+                    this.scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, /* verbose= */ false);
+                }
+                this.scanner.render((decodedText) => {
+                    // Extract code from URL if present
+                    let code = decodedText;
+                    try {
+                        const url = new URL(decodedText);
+                        code = url.searchParams.get('join') || decodedText;
+                    } catch(e) {} // Not a URL
+
+                    if(code && code.length === 5) {
+                        this.closeScanner();
+                        document.getElementById('join-code').value = code;
+                        this.joinSession(code);
+                    }
+                }, (error) => {
+                    // ignore frequent read errors
+                });
+            },
+
+            closeScanner() {
+                if(this.scanner) {
+                    this.scanner.clear().catch(e => console.error(e));
+                }
+                this.switchView('view-home');
+            },
+
+            // --- Cleanup ---
+
+            resetToHome() {
+                if(this.peer) {
+                    this.peer.destroy();
+                    this.peer = null;
+                }
+                this.hostConn = null;
+                this.connections = [];
+                this.isHost = false;
+                this.currentCode = null;
+                
+                document.getElementById('client-count').innerText = '0';
+                document.getElementById('client-list').innerHTML = '<p class="text-gray-500 text-sm text-center italic mt-4">No devices connected yet.</p>';
+                document.getElementById('print-queue').innerHTML = '<p class="text-gray-500 text-sm text-center italic mt-4">Queue is empty.</p>';
+                
+                const joinBtn = document.querySelector('#view-home button.btn-glass');
+                joinBtn.innerHTML = 'Join';
+                joinBtn.disabled = false;
+
+                this.resetClientForm();
+                this.updateStatus(false);
+                this.switchView('view-home');
+                this.loadRecentConnections();
+            }
+        };
+
+        // Initialize on load
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
