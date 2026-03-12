@@ -1,93 +1,110 @@
-<div align="center">
-<img src="https://cdn.iconscout.com/icon/free/png-512/free-printer-icon-svg-download-png-1093488.png?f=webp&w=256" alt="SharePrint Logo" width="120" />
-<h1>🖨️ SharePrint App</h1>
-<p><strong>A secure, serverless P2P printing utility for fast and automatic document printing.</strong></p>
+```markdown
+# 🖨️ SharePrint App
 
-</div>
+SharePrint App is a **simple browser-based peer-to-peer (P2P) printing utility** designed for **fast and automatic document printing directly from a web interface**. It is useful for environments where quick printing is required without repeatedly opening the print dialog.
 
-SharePrint is a browser-based peer-to-peer (P2P) web application designed to link mobile devices or secondary computers directly to a primary print server without requiring a backend. It is especially powerful when paired with Google Chrome's kiosk printing mode, allowing documents to print instantly without repeatedly opening the print dialog window.
+The project works best with **Google Chrome kiosk printing mode**, allowing documents to print instantly to the default printer.
 
-✨ Features
+## 🌐 Links
 
-⚡ Fast & Direct: Peer-to-Peer (WebRTC) file transfer. No files are stored on external servers.
+* **Live Demo:** [SharePrint App Demo](https://ronakksdevelopment.github.io/SharePrint-App/)
+* **GitHub Repository:** [ronakksdevelopment/SharePrint-App](https://github.com/ronakksdevelopment/SharePrint-App)
 
-🖨️ Automatic Printing: Supports bypassing the print dialog for 100% silent printing.
+## ✨ Features
 
-🧾 Instant Document Transfer: Send PDFs and images directly to the host printer.
+* **Fast Browser-Based Printing:** Lightning-fast peer-to-peer WebRTC connection for immediate file transfer.
+* **Automatic Printing Support:** Bypasses the traditional print preview for a seamless experience.
+* **No Print Dialog Popup:** Achieves 100% silent printing using Chrome's kiosk mode flags.
+* **Instant Document Printing:** Send PDFs and images directly to the host printer from any device.
+* **Works with Google Chrome:** Optimized for Chrome's specific kiosk and printing capabilities.
+* **Easy Setup and Usage:** Runs directly from the browser with zero installation or drivers needed.
 
-💻 Cross-Platform: Works seamlessly across PC, tablet, and mobile browsers.
+## 🧠 How It Works
 
-🔧 Zero Setup: Runs completely in the browser with no installation required.
+* **The Core Function:** The application triggers printing using the browser’s built-in JavaScript function:
 
-🧠 How It Works
+```javascript
+window.print();
 
-Host opens the app on a PC connected to a printer and generates a 5-digit room code.
+```
 
-Client (mobile or another PC) joins the room using the code or QR scanner.
+* **Kiosk Mode Magic:** When **Google Chrome** is launched with the `--kiosk-printing` flag, the browser **skips the print dialog** and directly sends the document to the **default printer**.
 
-Client selects a document and sends it directly over a secure P2P connection.
+## ⚙️ Chrome Kiosk Printing Setup (Windows)
 
-Host receives the file and triggers the browser's built-in window.print() function to physically print the document.
+To enable **automatic silent printing**, launch Google Chrome using the following command:
 
-⚙️ Chrome Kiosk Printing Setup (Windows)
-
-To enable automatic silent printing (skipping the print preview dialog), you must launch Google Chrome on the Host PC with specific flags.
-
-1. Set Your Default Printer
-
-Before using kiosk printing:
-
-Open Google Chrome.
-
-Press Ctrl + P to open the print dialog.
-
-Select your preferred physical printer.
-
-Set it as the default printer in your Windows/OS settings.
-
-2. Create a Desktop Shortcut (Recommended)
-
-Right-click on your Desktop and select New → Shortcut.
-
-Paste the following exact command into the location box:
-
+```cmd
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --kiosk-printing [https://ronakksdevelopment.github.io/SharePrint-App/](https://ronakksdevelopment.github.io/SharePrint-App/)
 
+```
 
-Click Next.
+This command will:
 
-Name the shortcut something recognizable, like SharePrint Kiosk.
+* **Launch Google Chrome** directly to the web application.
+* **Open the SharePrint App** automatically.
+* **Enable Kiosk Mode** for a fullscreen, distraction-free interface.
+* **Enable Silent Printing** to bypass the standard print dialog.
+* **Print Directly** to the default printer immediately upon receiving a file.
 
-Click Finish.
+## 🖥️ Create Desktop Shortcut (Recommended)
 
-Opening this shortcut will launch Chrome in fullscreen with automatic silent printing enabled. (To exit this fullscreen mode, simply press Alt + F4).
+* **Step 1:** Right-click on your **Desktop**
+* **Step 2:** Select **New → Shortcut**
+* **Step 3:** Paste the following command:
 
-🪟 Silent Printing Without Fullscreen
+```cmd
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --kiosk-printing [https://ronakksdevelopment.github.io/SharePrint-App/](https://ronakksdevelopment.github.io/SharePrint-App/)
 
-If you want silent printing but prefer to keep the normal windowed Chrome interface, use this command instead:
+```
 
+* **Step 4:** Click **Next**
+* **Step 5:** Name the shortcut (e.g., `SharePrint Kiosk`)
+* **Step 6:** Click **Finish**
+
+Opening this shortcut will launch Chrome with **automatic printing enabled**.
+
+## 🪟 Silent Printing Without Fullscreen
+
+If you do not want fullscreen kiosk mode but still want the silent printing feature, use:
+
+```cmd
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing [https://ronakksdevelopment.github.io/SharePrint-App/](https://ronakksdevelopment.github.io/SharePrint-App/)
 
+```
 
-💡 Use Cases
+This keeps the normal Chrome window but still enables **silent printing**.
 
-Print Kiosks: Setup a dedicated iPad or tablet next to a PC for customers to print.
+## 🖨️ Set Default Printer
 
-Cyber Café Stations: Allow users to print directly from their phones to a master printer.
+Before using kiosk printing, make sure your printer is configured:
 
-POS Receipt Printing: Send receipts from a mobile ordering device to a central counter printer.
+* **1.** Open **Google Chrome**
+* **2.** Press **Ctrl + P** to open the print dialog
+* **3.** Select your preferred physical printer
+* **4.** Set it as the **default printer** in your OS settings
 
-Office Dashboards: Quick, frictionless printing without installing network drivers on every employee's phone.
+Chrome will automatically send print jobs to this printer from now on.
 
-📄 License
+## ⌨️ Exit Kiosk Mode
 
-This project is open-source and available for educational and practical use.
+* **Close the App:** To close the fullscreen kiosk mode, simply press `Alt + F4`.
 
-<div align="center">
+## 💡 Use Cases
 
+* **Print Kiosks:** Setup a dedicated iPad or tablet next to a PC for customers to print.
+* **Cyber Café Printing Stations:** Allow users to print directly from their phones to a master printer.
+* **POS Receipt Printing:** Send receipts from a mobile ordering device to a central counter printer.
+* **Office Printing Dashboards:** Quick, frictionless printing without installing network drivers on every employee's phone.
 
+## 📄 License
 
+* **Open Source:** This project is open-source and available for educational and practical use. Feel free to use and modify it!
 
+---
 
-⭐ <i>If you find this project useful, consider <b>starring the repository!</b></i> ⭐
-</div>
+> ⭐ If you find this project useful, consider **starring the repository**. This app is a hub for seamless P2P printing—enjoy printing without boundaries!
+
+```
+
+```
