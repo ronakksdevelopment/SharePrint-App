@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TaskPrint | Direct P2P Printing</title>
+    <title>SharePrint | Direct P2P Printing</title>
     
     <!-- Favicon -->
     <link rel="icon" href="https://cdn.iconscout.com/icon/free/png-512/free-printer-icon-svg-download-png-1093488.png?f=webp&w=256" type="image/png">
@@ -191,9 +191,9 @@
     <header class="w-full px-6 py-5 flex justify-between items-center z-10 animate-fade-in">
         <div class="flex items-center gap-3 cursor-pointer group" onclick="app.disconnect()">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20 p-2 group-hover:scale-105 transition-transform">
-                <img src="https://cdn.iconscout.com/icon/free/png-512/free-printer-icon-svg-download-png-1093488.png?f=webp&w=256" alt="TaskPrint Logo" class="w-full h-full object-contain filter drop-shadow-md">
+                <img src="https://cdn.iconscout.com/icon/free/png-512/free-printer-icon-svg-download-png-1093488.png?f=webp&w=256" alt="SharePrint Logo" class="w-full h-full object-contain filter drop-shadow-md">
             </div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Task<span class="text-brand-400">Print</span></h1>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Share<span class="text-brand-400">Print</span></h1>
         </div>
         <div class="flex gap-3 items-center">
             <button id="connection-status" class="hidden items-center gap-2 px-4 py-2 rounded-full glass-panel text-sm border-white/5 hover:bg-white/5 transition-colors cursor-default group">
@@ -467,7 +467,7 @@
                 Developed With <span class="text-red-500 animate-pulse text-base leading-none">❤️</span> By ROnakks Development & Gemini AI
             </p>
             <p class="text-[11px] text-slate-500 font-medium tracking-wide">
-                Open source and available on <a href="https://github.com/ronakksdevelopment/TaskPrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>.
+                Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>.
             </p>
         </div>
     </footer>
@@ -551,7 +551,7 @@
                 this.loadHistory();
                 
                 // Load saved nickname
-                const savedName = localStorage.getItem('taskprint_name');
+                const savedName = localStorage.getItem('shareprint_name');
                 if (savedName) this.els.nicknameInput.value = savedName;
 
                 // Check URL for invite code
@@ -613,7 +613,7 @@
                     return false;
                 }
                 this.userName = name;
-                localStorage.setItem('taskprint_name', name);
+                localStorage.setItem('shareprint_name', name);
                 return true;
             },
 
@@ -696,7 +696,7 @@
                 this.els.detectedPrinter.textContent = "Scanning hardware ports...";
                 this.els.printerIcon.className = "fas fa-spinner fa-spin";
                 
-                const hostId = `taskprint-net-${code}`;
+                const hostId = `shareprint-net-${code}`;
                 this.peer = new Peer(hostId, this.peerConfig);
 
                 this.peer.on('open', (id) => {
@@ -920,7 +920,7 @@
                 this.peer = new Peer(this.peerConfig);
 
                 this.peer.on('open', () => {
-                    const hostId = `taskprint-net-${code}`;
+                    const hostId = `shareprint-net-${code}`;
                     this.hostConn = this.peer.connect(hostId, { 
                         reliable: true,
                         metadata: { name: this.userName }
@@ -1073,7 +1073,7 @@
             saveToHistory(code) {
                 let history = [];
                 try {
-                    const stored = localStorage.getItem('taskprint_history');
+                    const stored = localStorage.getItem('shareprint_history');
                     if (stored) history = JSON.parse(stored);
                 } catch(e) {}
                 
@@ -1081,14 +1081,14 @@
                 history.unshift(code);
                 if (history.length > 4) history.pop();
                 
-                localStorage.setItem('taskprint_history', JSON.stringify(history));
+                localStorage.setItem('shareprint_history', JSON.stringify(history));
                 this.loadHistory();
             },
 
             loadHistory() {
                 let history = [];
                 try {
-                    const stored = localStorage.getItem('taskprint_history');
+                    const stored = localStorage.getItem('shareprint_history');
                     if (stored) history = JSON.parse(stored);
                 } catch(e) {}
 
@@ -1110,7 +1110,7 @@
             },
 
             clearHistory() {
-                localStorage.removeItem('taskprint_history');
+                localStorage.removeItem('shareprint_history');
                 this.loadHistory();
             },
 
