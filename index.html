@@ -37,17 +37,20 @@
                     },
                     colors: {
                         brand: {
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            accent: '#2dd4bf',
-                            paper: '#f8fafc',
-                            dark: '#0b1120'
+                            400: '#60a5fa', // Blue 400
+                            500: '#3b82f6', // Blue 500
+                            600: '#2563eb', // Blue 600
+                            accent: '#2dd4bf', // Teal 400
+                            paper: '#f8fafc', // Light Slate
+                            dark: '#0b1120'  // Deep professional slate
                         }
                     },
                     animation: {
                         'blob': 'blob 10s infinite',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'modal-enter': 'modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                     },
                     keyframes: {
                         blob: {
@@ -55,6 +58,18 @@
                             '33%': { transform: 'translate(30px, -50px) scale(1.05)' },
                             '66%': { transform: 'translate(-20px, 20px) scale(0.95)' },
                             '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        modalEnter: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
                         }
                     }
                 }
@@ -93,28 +108,46 @@
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(96, 165, 250, 0.5); }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(96, 165, 250, 0.5); 
+        }
 
-        /* View Transitions Fixed */
+        /* View Transitions */
         .view-section {
             display: none;
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.3s ease-in-out;
         }
         .view-section.active {
             display: flex;
             opacity: 1;
-            transform: translateY(0);
         }
 
         /* Scanner overrides */
-        #qr-reader { border: none !important; border-radius: 1rem; overflow: hidden; }
-        #qr-reader video { border-radius: 1rem; object-fit: cover; }
-        #qr-reader__scan_region { background: rgba(0,0,0,0.5); }
+        #qr-reader {
+            border: none !important;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        #qr-reader video {
+            border-radius: 1rem;
+            object-fit: cover;
+        }
+        #qr-reader__scan_region {
+            background: rgba(0,0,0,0.5);
+        }
 
         /* Background Design */
         .bg-gradient-spot {
@@ -127,17 +160,13 @@
         .spot-primary { top: -10%; left: -5%; width: 40vw; height: 40vw; background: #1e3a8a; animation: blob 15s infinite alternate; }
         .spot-accent { bottom: -10%; right: -5%; width: 35vw; height: 35vw; background: #134e4a; animation: blob 12s infinite alternate-reverse; }
 
-        /* Print iframe hide - Absolute invisibility */
+        /* Print iframe hide */
         .print-frame {
             position: absolute;
-            width: 1px;
-            height: 1px;
-            left: -9999px;
-            top: -9999px;
+            width: 0;
+            height: 0;
             border: 0;
-            opacity: 0;
-            z-index: -9999;
-            pointer-events: none;
+            visibility: hidden;
         }
     </style>
 </head>
@@ -159,15 +188,15 @@
     </div>
 
     <!-- Header -->
-    <header class="w-full px-6 py-5 flex justify-between items-center z-10">
-        <div class="flex items-center gap-3 cursor-pointer group" onclick="app.disconnect(false)">
+    <header class="w-full px-6 py-5 flex justify-between items-center z-10 animate-fade-in">
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="app.disconnect()">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20 p-2 group-hover:scale-105 transition-transform">
                 <img src="https://cdn.iconscout.com/icon/free/png-512/free-printer-icon-svg-download-png-1093488.png?f=webp&w=256" alt="SharePrint Logo" class="w-full h-full object-contain filter drop-shadow-md">
             </div>
             <h1 class="text-2xl font-bold tracking-tight text-white">Share<span class="text-brand-400">Print</span></h1>
         </div>
         <div class="flex gap-3 items-center">
-            <button id="connection-status" aria-label="Connection Status" class="hidden items-center gap-2 px-4 py-2 rounded-full glass-panel text-sm border-white/5 hover:bg-white/5 transition-colors cursor-default group">
+            <button id="connection-status" class="hidden items-center gap-2 px-4 py-2 rounded-full glass-panel text-sm border-white/5 hover:bg-white/5 transition-colors cursor-default group">
                 <div id="status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
                 <span class="opacity-90 font-medium group-hover:text-white transition-colors" id="status-label">Offline</span>
             </button>
@@ -178,11 +207,11 @@
     <main class="flex-grow flex flex-col items-center justify-center p-4 z-10 w-full max-w-5xl mx-auto">
         
         <!-- View: HOME (Join or Create) -->
-        <section id="view-home" class="view-section active flex-col items-center w-full gap-8">
+        <section id="view-home" class="view-section active flex-col items-center w-full gap-8 animate-slide-up">
             
             <div class="text-center mb-2">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold tracking-wider uppercase mb-5">
-                    <i class="fas fa-bolt text-[10px]"></i> Serverless Binary Network Printing
+                    <i class="fas fa-print text-[10px]"></i> Serverless Network Printing
                 </div>
                 <h2 class="text-4xl md:text-6xl font-extrabold mb-4 tracking-tight">Direct Device Printing</h2>
                 <p class="text-slate-400 text-lg max-w-2xl mx-auto font-light leading-relaxed">Connect multiple devices directly to your printer. Send files securely over P2P without backend servers.</p>
@@ -195,7 +224,7 @@
                     <div class="w-12 h-12 rounded-xl bg-brand-400/20 text-brand-400 flex items-center justify-center relative z-10 shrink-0">
                         <i class="fas fa-desktop text-xl"></i>
                     </div>
-                    <input type="text" id="nickname-input" aria-label="Device Nickname" placeholder="DEVICE NICKNAME" maxlength="15" class="w-full bg-transparent border-none text-white font-bold text-lg tracking-[0.1em] placeholder:text-brand-400/40 focus:outline-none uppercase relative z-10" oninput="this.value = this.value.toUpperCase()">
+                    <input type="text" id="nickname-input" placeholder="DEVICE NICKNAME" maxlength="15" class="w-full bg-transparent border-none text-white font-bold text-lg tracking-[0.1em] placeholder:text-brand-400/40 focus:outline-none uppercase relative z-10" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <p class="text-center text-xs text-brand-400/70 mt-2 font-medium uppercase tracking-widest"><i class="fas fa-info-circle"></i> Required for device identification</p>
             </div>
@@ -208,7 +237,7 @@
                     </div>
                     <h3 class="text-2xl font-semibold mb-3 text-white">Host Print Server</h3>
                     <p class="text-slate-400 mb-8 text-sm leading-relaxed">Make the printer connected to this device available to others via a 5-digit code or QR scan.</p>
-                    <button id="btn-create" onclick="app.hostSession()" aria-label="Start Print Server" class="mt-auto w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-white font-medium shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all active:scale-[0.98]">
+                    <button id="btn-create" onclick="app.hostSession()" class="mt-auto w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-white font-medium shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all active:scale-[0.98]">
                         Start Print Server
                     </button>
                 </div>
@@ -223,8 +252,8 @@
                     
                     <div class="w-full flex flex-col gap-3 mt-auto">
                         <div class="relative w-full">
-                            <input type="text" id="join-code-input" aria-label="Join Code" placeholder="Enter 5-digit code" maxlength="5" class="w-full glass-input py-3.5 pl-5 pr-12 rounded-xl text-center font-mono text-xl tracking-[0.25em] text-brand-accent focus:border-brand-accent transition-all">
-                            <button id="btn-join" onclick="app.joinSession()" aria-label="Join via Code" class="absolute right-2 top-2 bottom-2 aspect-square rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center transition-colors active:scale-95">
+                            <input type="text" id="join-code-input" placeholder="Enter 5-digit code" maxlength="5" class="w-full glass-input py-3.5 pl-5 pr-12 rounded-xl text-center font-mono text-xl tracking-[0.25em] text-brand-accent focus:border-brand-accent transition-all">
+                            <button id="btn-join" onclick="app.joinSession()" class="absolute right-2 top-2 bottom-2 aspect-square rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center transition-colors active:scale-95">
                                 <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -233,7 +262,7 @@
                             <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">or</span>
                             <div class="h-px bg-white/5 flex-grow"></div>
                         </div>
-                        <button onclick="app.openScanner()" aria-label="Scan QR Code" class="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-medium transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <button onclick="app.openScanner()" class="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-medium transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
                             <i class="fas fa-qrcode"></i> Scan QR Code
                         </button>
                     </div>
@@ -253,9 +282,9 @@
         </section>
 
         <!-- View: SCANNER -->
-        <section id="view-scanner" class="view-section flex-col items-center w-full max-w-md">
+        <section id="view-scanner" class="view-section flex-col items-center w-full max-w-md animate-slide-up">
             <div class="glass-panel rounded-3xl p-6 w-full flex flex-col items-center relative overflow-hidden">
-                <button onclick="app.closeScanner()" aria-label="Close Scanner" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors z-10">
+                <button onclick="app.closeScanner()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors z-10">
                     <i class="fas fa-times text-sm"></i>
                 </button>
                 <h3 class="text-xl font-semibold mb-6 flex items-center gap-2 text-white"><i class="fas fa-camera text-brand-400"></i> Scan to Connect</h3>
@@ -271,7 +300,7 @@
         </section>
 
         <!-- View: HOST DASHBOARD -->
-        <section id="view-host" class="view-section flex-col w-full">
+        <section id="view-host" class="view-section flex-col w-full animate-slide-up">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-6xl mx-auto">
                 
                 <!-- Left Column: Server Status & Access Info -->
@@ -283,12 +312,12 @@
                         <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-server text-brand-400"></i> Print Server Active</h3>
                         
                         <div class="bg-black/30 p-4 rounded-2xl border border-white/5 mb-6 flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 shrink-0 transition-colors" id="printer-icon-bg">
+                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 shrink-0">
                                 <i class="fas fa-usb" id="printer-icon"></i>
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-1">Status</p>
-                                <p id="detected-printer-name" class="text-sm font-bold text-slate-200 truncate">Scanning System...</p>
+                                <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-1">Detected Printer</p>
+                                <p id="detected-printer-name" class="text-sm font-bold text-slate-200 truncate">Scanning hardware...</p>
                             </div>
                         </div>
 
@@ -303,7 +332,7 @@
 
                     <div class="glass-panel p-5 rounded-3xl border border-white/10 text-center">
                         <p class="text-xs text-slate-400 mb-3"><i class="fas fa-info-circle text-brand-accent"></i> <strong>Kiosk Auto-Print:</strong> To bypass browser print confirmation dialogs for a truly silent experience, launch Chrome with the <code class="bg-black/40 px-1 py-0.5 rounded text-brand-400 font-mono text-[10px]">--kiosk-printing</code> flag.</p>
-                        <button onclick="app.disconnect(true)" class="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-colors border border-red-500/20 active:scale-95 text-sm">
+                        <button onclick="app.disconnect()" class="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-colors border border-red-500/20 active:scale-95 text-sm">
                             <i class="fas fa-power-off mr-2"></i> Stop Server
                         </button>
                     </div>
@@ -312,17 +341,14 @@
                 <!-- Right Column: Queue & Connected Devices -->
                 <div class="col-span-1 lg:col-span-2 flex flex-col gap-6 h-full min-h-[500px]">
                     
-                    <div class="glass-panel p-6 rounded-3xl border border-white/10 flex-grow flex flex-col relative overflow-hidden">
+                    <div class="glass-panel p-6 rounded-3xl border border-white/10 flex-grow flex flex-col">
                         <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fas fa-layer-group text-brand-400"></i> Live Print Queue</h3>
-                            <div class="flex items-center gap-3">
-                                <button onclick="app.clearPrintQueue()" class="text-xs text-slate-400 hover:text-white transition-colors"><i class="fas fa-trash-alt"></i> Clear</button>
-                                <span id="queue-count" class="bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300">0 Jobs</span>
-                            </div>
+                            <span id="queue-count" class="bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300">0 Jobs</span>
                         </div>
                         
                         <div id="print-queue-list" class="flex-grow flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-2">
-                            <div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 space-y-3" id="queue-empty-state">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 space-y-3">
                                 <i class="fas fa-inbox text-4xl"></i>
                                 <p class="text-sm font-medium">Waiting for incoming print jobs...</p>
                             </div>
@@ -345,7 +371,7 @@
         </section>
 
         <!-- View: CLIENT / PRINT INTERFACE -->
-        <section id="view-client" class="view-section flex-col w-full max-w-2xl mx-auto">
+        <section id="view-client" class="view-section flex-col w-full max-w-2xl mx-auto animate-slide-up">
             <div class="glass-panel rounded-3xl border border-white/10 flex flex-col w-full overflow-hidden shadow-2xl relative bg-black/20">
                 
                 <!-- Client Header -->
@@ -356,7 +382,7 @@
                             <i class="fas fa-link"></i> Linked to <span id="connected-host-name" class="font-bold text-white">Host</span>
                         </p>
                     </div>
-                    <button onclick="app.disconnect(false)" class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors flex items-center justify-center border border-red-500/20 active:scale-95" title="Disconnect">
+                    <button onclick="app.disconnect()" class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors flex items-center justify-center border border-red-500/20 active:scale-95" title="Disconnect">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
@@ -365,7 +391,7 @@
                     
                     <!-- File Drag & Drop Zone -->
                     <div class="w-full relative">
-                        <input type="file" id="file-input" aria-label="File Upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept=".pdf,.png,.jpg,.jpeg" onchange="app.handleFileSelect(event)">
+                        <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept=".pdf,.png,.jpg,.jpeg" onchange="app.handleFileSelect(event)">
                         
                         <div id="file-drop-zone" class="w-full border-2 border-dashed border-brand-500/30 hover:border-brand-500 bg-brand-500/5 rounded-2xl p-10 flex flex-col items-center justify-center transition-all group shadow-inner relative">
                             
@@ -375,12 +401,12 @@
                                     <i class="fas fa-cloud-upload-alt text-3xl text-slate-400 group-hover:text-brand-400 transition-colors"></i>
                                 </div>
                                 <h3 class="text-lg font-bold text-white mb-1">Click or Drop File</h3>
-                                <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">Supported: PDF, JPG, PNG</p>
+                                <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">Supported: PDF, JPG, PNG (Max 20MB)</p>
                             </div>
 
                             <!-- Selected State -->
                             <div id="file-selected-state" class="hidden flex-col items-center pointer-events-none w-full">
-                                <div class="w-16 h-16 rounded-2xl bg-brand-accent/20 flex items-center justify-center mb-4 border border-brand-accent/30 text-3xl text-brand-accent shadow-[0_0_15px_rgba(45,212,191,0.2)]" id="file-icon-wrapper">
+                                <div class="w-16 h-16 rounded-2xl bg-brand-accent/20 flex items-center justify-center mb-4 border border-brand-accent/30 text-3xl text-brand-accent shadow-[0_0_15px_rgba(45,212,191,0.2)]">
                                     <i id="file-type-icon" class="fas fa-file-pdf"></i>
                                 </div>
                                 <h3 id="selected-file-name" class="text-lg font-bold text-white mb-1 truncate w-full text-center px-4">document.pdf</h3>
@@ -391,41 +417,22 @@
                     </div>
 
                     <!-- Print Settings -->
-                    <div class="flex flex-col gap-4 bg-black/30 p-5 rounded-2xl border border-white/5">
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Orientation Setting -->
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Orientation</label>
-                                <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
-                                    <button onclick="app.setOrientation('portrait')" id="btn-portrait" aria-label="Portrait" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
-                                        <i class="fas fa-portrait"></i> Portrait
-                                    </button>
-                                    <button onclick="app.setOrientation('landscape')" id="btn-landscape" aria-label="Landscape" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
-                                        <i class="fas fa-image"></i> Landscape
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Color Mode Setting -->
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Color Mode</label>
-                                <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
-                                    <button onclick="app.setColorMode('color')" id="btn-color" aria-label="Color" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
-                                        <i class="fas fa-palette"></i> Color
-                                    </button>
-                                    <button onclick="app.setColorMode('bw')" id="btn-bw" aria-label="Black and White" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
-                                        <i class="fas fa-moon"></i> B&W
-                                    </button>
-                                </div>
+                    <div class="grid grid-cols-2 gap-4 bg-black/30 p-4 rounded-2xl border border-white/5">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Orientation</label>
+                            <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
+                                <button onclick="app.setOrientation('portrait')" id="btn-portrait" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-portrait"></i> Portrait
+                                </button>
+                                <button onclick="app.setOrientation('landscape')" id="btn-landscape" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-image"></i> Landscape
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Paper Size Setting -->
-                        <div class="flex flex-col gap-2 relative z-20 mt-1">
+                        <div class="flex flex-col gap-2 relative z-20">
                             <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Paper Size</label>
                             <div class="relative w-full">
-                                <select id="paper-size" aria-label="Paper Size" class="w-full bg-black/50 border border-white/5 rounded-xl py-2.5 px-4 text-sm text-white font-medium outline-none focus:border-brand-500 appearance-none cursor-pointer">
+                                <select id="paper-size" class="w-full bg-black/50 border border-white/5 rounded-xl py-2.5 px-4 text-sm text-white font-medium outline-none focus:border-brand-500 appearance-none cursor-pointer">
                                     <option value="A4">A4 Standard</option>
                                     <option value="Letter">US Letter</option>
                                     <option value="Legal">Legal Size</option>
@@ -443,23 +450,10 @@
                 </div>
                 
                 <!-- Uploading Overlay -->
-                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/95 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
-                    <!-- Progress Circle -->
-                    <div class="relative w-24 h-24 mb-4">
-                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
-                            <circle id="upload-progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" class="transition-all duration-75"></circle>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span id="upload-progress-text" class="text-xl font-bold text-white">0%</span>
-                        </div>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-1">Transmitting File...</h3>
-                    <p id="upload-speed-text" class="text-slate-400 text-xs font-mono mb-6">Calculating speed...</p>
-                    
-                    <button onclick="app.cancelTransfer()" class="px-6 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium transition-colors border border-red-500/20 active:scale-95">
-                        Cancel Transfer
-                    </button>
+                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/90 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
+                    <div class="w-20 h-20 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin mb-6"></div>
+                    <h3 class="text-xl font-bold text-white mb-2">Transmitting to Host...</h3>
+                    <p class="text-slate-400 text-sm font-medium">Please wait</p>
                 </div>
             </div>
         </section>
@@ -482,27 +476,18 @@
     <script>
         const app = {
             peer: null,
-            connections: new Map(), 
-            incomingJobs: {}, 
-            hostConn: null, 
+            connections: new Map(), // Host tracks multiple connections
+            hostConn: null, // Client tracks connection to host
             currentSessionId: null,
             isHost: false,
             userName: '', 
-            deviceId: '', 
             isJoining: false,
             
             selectedFile: null,
-            printSettings: { orientation: 'portrait', colorMode: 'color', paperSize: 'A4' },
-            
+            printSettings: { orientation: 'portrait', paperSize: 'A4' },
             printQueueCount: 0,
-            printQueueLimit: 20, // Max visual jobs to prevent UI DOM leaks
-            jobCleanupInterval: null, // Host interval to clean dead chunks
-
-            // Transfer Control
-            isTransferCancelled: false,
-            wakeLock: null,
-
-            // Premium STUN for reliable WebRTC NAT traversal
+            
+            // Premium STUN for reliable WebRTC
             peerConfig: {
                 config: {
                     'iceServers': [
@@ -514,9 +499,10 @@
                 debug: 1
             },
 
+            // Scanner
             html5QrcodeScanner: null,
 
-            // DOM Elements
+            // DOM Elements Mapping
             els: {
                 views: document.querySelectorAll('.view-section'),
                 toast: document.getElementById('toast'),
@@ -526,74 +512,69 @@
                 nicknameInput: document.getElementById('nickname-input'),
                 joinInput: document.getElementById('join-code-input'),
                 
+                // Connection UI
                 connStatus: document.getElementById('connection-status'),
                 statusLabel: document.getElementById('status-label'),
                 statusDot: document.getElementById('status-dot'),
                 
+                // Host UI
                 hostCode: document.getElementById('host-session-code'),
                 hostQr: document.getElementById('host-qrcode'),
                 detectedPrinter: document.getElementById('detected-printer-name'),
                 printerIcon: document.getElementById('printer-icon'),
-                printerIconBg: document.getElementById('printer-icon-bg'),
                 queueList: document.getElementById('print-queue-list'),
                 queueCount: document.getElementById('queue-count'),
-                queueEmpty: document.getElementById('queue-empty-state'),
                 devicesList: document.getElementById('connected-devices-list'),
                 hostPeerCount: document.getElementById('host-peer-count'),
                 
+                // Client UI
                 clientHostName: document.getElementById('connected-host-name'),
                 fileInput: document.getElementById('file-input'),
                 fileInitial: document.getElementById('file-initial-state'),
                 fileSelected: document.getElementById('file-selected-state'),
                 fileTypeIcon: document.getElementById('file-type-icon'),
-                fileIconWrapper: document.getElementById('file-icon-wrapper'),
                 fileName: document.getElementById('selected-file-name'),
                 fileSize: document.getElementById('selected-file-size'),
                 btnSend: document.getElementById('btn-send-print'),
                 uploadOverlay: document.getElementById('upload-overlay'),
-                uploadProgressText: document.getElementById('upload-progress-text'),
-                uploadProgressCircle: document.getElementById('upload-progress-circle'),
-                uploadSpeedText: document.getElementById('upload-speed-text'),
                 
+                // History
                 recentContainer: document.getElementById('recent-sessions-container'),
                 recentList: document.getElementById('recent-sessions-list'),
+                
+                // Buttons
                 btnCreate: document.getElementById('btn-create'),
                 btnJoin: document.getElementById('btn-join')
             },
 
             init() {
-                // Persistent ID generation to solve duplicate connection bug
-                this.deviceId = localStorage.getItem('shareprint_device_id');
-                if (!this.deviceId) {
-                    this.deviceId = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-                    localStorage.setItem('shareprint_device_id', this.deviceId);
-                }
-
                 this.loadHistory();
                 
+                // Load saved nickname
                 const savedName = localStorage.getItem('shareprint_name');
                 if (savedName) this.els.nicknameInput.value = savedName;
 
+                // Check URL for invite code
                 const urlParams = new URLSearchParams(window.location.search);
                 const joinCode = urlParams.get('join');
                 if (joinCode && /^\d{5}$/.test(joinCode)) {
                     this.els.joinInput.value = joinCode;
                 }
 
-                this.setupDragDrop();
-            },
-
-            setupDragDrop() {
+                // Drag & Drop event listeners
                 const dropZone = document.getElementById('file-drop-zone');
-                const prevent = e => { e.preventDefault(); e.stopPropagation(); };
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, prevent, false));
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+                function preventDefaults (e) { e.preventDefault(); e.stopPropagation(); }
                 
                 dropZone.addEventListener('dragover', () => dropZone.classList.add('border-brand-500', 'bg-brand-500/10'));
                 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-brand-500', 'bg-brand-500/10'));
                 dropZone.addEventListener('drop', (e) => {
                     dropZone.classList.remove('border-brand-500', 'bg-brand-500/10');
                     if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        this.handleFileSelect({ target: { files: e.dataTransfer.files } });
+                        this.els.fileInput.files = e.dataTransfer.files;
+                        this.handleFileSelect({ target: this.els.fileInput });
                     }
                 });
             },
@@ -621,7 +602,7 @@
                 this.toastTimeout = setTimeout(() => {
                     this.els.toast.classList.remove('opacity-100', 'translate-y-0');
                     this.els.toast.classList.add('opacity-0', 'translate-y-[-20px]');
-                }, 4000);
+                }, 3500);
             },
 
             validateName() {
@@ -636,34 +617,13 @@
                 return true;
             },
 
-            async requestWakeLock() {
-                try {
-                    if ('wakeLock' in navigator) {
-                        this.wakeLock = await navigator.wakeLock.request('screen');
-                    }
-                } catch (err) {}
-            },
-            
-            releaseWakeLock() {
-                if (this.wakeLock !== null) {
-                    this.wakeLock.release().catch(()=>{});
-                    this.wakeLock = null;
-                }
-            },
-
             navigate(viewId) {
-                // Bug #1 Fix: Ensure smooth transition by respecting CSS opacity timings
                 this.els.views.forEach(v => {
-                    if (v.classList.contains('active')) {
-                        v.style.opacity = '0';
-                        v.style.transform = 'translateY(20px)';
-                        setTimeout(() => {
-                            v.classList.remove('active');
-                            v.style.display = 'none';
-                        }, 300); // Matches CSS transition duration
+                    if(v.classList.contains('active')) {
+                        v.classList.remove('active');
+                        setTimeout(() => { v.style.display = 'none'; }, 300);
                     } else {
                         v.style.display = 'none';
-                        v.classList.remove('active');
                     }
                 });
                 
@@ -671,10 +631,8 @@
                     const target = document.getElementById(`view-${viewId}`);
                     if (target) {
                         target.style.display = 'flex';
-                        void target.offsetWidth; // Force reflow
+                        void target.offsetWidth;
                         target.classList.add('active');
-                        target.style.opacity = '1';
-                        target.style.transform = 'translateY(0)';
                     }
                 }, 310);
 
@@ -709,25 +667,14 @@
             cleanupSession() {
                 this.connections.forEach(c => c.close());
                 this.connections.clear();
-                this.incomingJobs = {};
                 if (this.hostConn) this.hostConn.close();
                 if (this.peer) {
                     this.peer.destroy();
                     this.peer = null;
                 }
-                clearInterval(this.jobCleanupInterval);
-                
                 this.hostConn = null;
                 this.currentSessionId = null;
                 this.printQueueCount = 0;
-                this.isHost = false; // Bug #13 Fix
-                this.releaseWakeLock();
-                
-                // Bug #4 Fix: Clear host UI completely
-                this.els.queueList.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 space-y-3" id="queue-empty-state"><i class="fas fa-inbox text-4xl"></i><p class="text-sm font-medium">Waiting for incoming print jobs...</p></div>`;
-                this.els.queueCount.textContent = '0 Jobs';
-                this.els.devicesList.innerHTML = `<div class="text-xs text-slate-500 italic mt-2">No devices connected. Share your code to begin.</div>`;
-                this.els.hostPeerCount.textContent = '0';
             },
 
             generateCode() { return Math.floor(10000 + Math.random() * 90000).toString(); },
@@ -737,7 +684,7 @@
                 if (!this.validateName()) return;
                 this.cleanupSession();
 
-                let code = this.generateCode();
+                const code = this.generateCode();
                 this.currentSessionId = code;
                 this.isHost = true;
                 
@@ -745,127 +692,73 @@
                 this.els.btnCreate.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Server...';
                 this.els.btnCreate.disabled = true;
 
-                this.els.detectedPrinter.textContent = "Scanning OS for printers...";
+                // Simulate Hardware Detection UX
+                this.els.detectedPrinter.textContent = "Scanning hardware ports...";
                 this.els.printerIcon.className = "fas fa-spinner fa-spin";
-                this.els.printerIconBg.className = "w-10 h-10 rounded-full bg-slate-500/20 flex items-center justify-center text-slate-400 shrink-0 transition-colors";
                 
-                // Bug #8 Fix: Minimal collision prevention mapping
                 const hostId = `shareprint-net-${code}`;
                 this.peer = new Peer(hostId, this.peerConfig);
 
                 this.peer.on('open', (id) => {
                     this.els.btnCreate.innerHTML = originalText;
                     this.els.btnCreate.disabled = false;
+
                     this.els.hostCode.textContent = code;
                     this.generateQR(code, this.els.hostQr);
                     
                     this.navigate('host');
                     this.updateConnectionBadge();
-                    this.requestWakeLock();
                     this.showToast("Print Server Active.", "success");
 
+                    // Resolve Hardware simulation
                     setTimeout(() => {
                         const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                        this.els.detectedPrinter.textContent = isMobile ? "Virtual Print Service" : "System Default OS Printer";
+                        this.els.detectedPrinter.textContent = isMobile ? "OTG Mobile Print Service" : "System Default OS Printer";
                         this.els.printerIcon.className = isMobile ? "fas fa-mobile-alt" : "fas fa-print";
-                        this.els.printerIconBg.className = "w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 shrink-0 transition-colors";
-                    }, 1500);
-
-                    // Bug #7 Fix: Memory leak cleanup interval for abandoned chunks
-                    this.jobCleanupInterval = setInterval(() => {
-                        const now = Date.now();
-                        for (let jId in this.incomingJobs) {
-                            if (now - this.incomingJobs[jId].timestamp > 120000) { // 2 minute timeout
-                                delete this.incomingJobs[jId];
-                            }
-                        }
-                    }, 30000);
+                        this.els.printerIcon.parentElement.classList.replace('bg-green-500/20', 'bg-brand-500/20');
+                        this.els.printerIcon.classList.replace('text-green-400', 'text-brand-400');
+                    }, 1200);
                 });
 
                 this.peer.on('connection', (conn) => {
                     conn.on('open', () => {
-                        // Bug #2 Fix: Persistent ID Deduplication
-                        const clientDeviceId = (conn.metadata && conn.metadata.deviceId) || conn.peer;
                         const clientName = (conn.metadata && conn.metadata.name) || 'Unknown Device';
-                        
-                        if (this.connections.has(clientDeviceId)) {
-                            this.connections.get(clientDeviceId).close();
-                        }
-                        
                         conn.customName = clientName;
-                        conn.clientDeviceId = clientDeviceId;
-                        this.connections.set(clientDeviceId, conn);
-                        
+                        this.connections.set(conn.peer, conn);
                         this.updateHostDeviceList();
                         this.showToast(`${clientName} linked to printer`, "success");
                         conn.send({ type: 'welcome', hostName: this.userName });
                     });
 
                     conn.on('data', (payload) => {
-                        // Binary ArrayBuffer Assembly logic
-                        if (payload.type === 'print-job-start') {
-                            this.incomingJobs[payload.jobId] = {
-                                ...payload,
-                                chunks: new Array(payload.totalChunks),
-                                receivedCount: 0,
-                                timestamp: Date.now()
-                            };
-                        } else if (payload.type === 'print-job-chunk') {
-                            const job = this.incomingJobs[payload.jobId];
-                            if (job) {
-                                // PeerJS sends ArrayBuffer natively if supported, but we handle it generally
-                                job.chunks[payload.chunkIndex] = payload.data; 
-                                job.receivedCount++;
-                                job.timestamp = Date.now(); // update activity timer
-                            }
-                        } else if (payload.type === 'print-job-end') {
-                            const job = this.incomingJobs[payload.jobId];
-                            if (job && job.receivedCount === job.totalChunks) {
-                                // Bug #19 Fix: Reconstruct from ArrayBuffers directly
-                                const blob = new Blob(job.chunks, { type: job.fileType });
-                                job.blobUrl = URL.createObjectURL(blob);
-                                
-                                this.handleIncomingPrintJob(conn.customName, job);
-                                delete this.incomingJobs[payload.jobId];
-                            } else {
-                                this.showToast('Received incomplete print job.', 'error');
-                            }
-                        } else if (payload.type === 'print-job-cancel') {
-                            delete this.incomingJobs[payload.jobId];
-                            this.showToast(`${conn.customName} cancelled the transfer.`, "warning");
+                        if (payload.type === 'print-job') {
+                            this.handleIncomingPrintJob(conn.customName, payload);
                         }
                     });
 
                     conn.on('close', () => {
-                        if (this.connections.get(conn.clientDeviceId) === conn) {
-                            this.connections.delete(conn.clientDeviceId);
-                            this.updateHostDeviceList();
-                            this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
-                        }
+                        this.connections.delete(conn.peer);
+                        this.updateHostDeviceList();
+                        this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
                     });
                 });
 
                 this.peer.on('error', (err) => {
-                    this.els.btnCreate.innerHTML = 'Start Print Server';
+                    this.els.btnCreate.innerHTML = originalText;
                     this.els.btnCreate.disabled = false;
-                    
-                    if(err.type === 'unavailable-id') {
-                        // Very rare collision, just auto-retry once
-                        this.cleanupSession();
-                        setTimeout(() => this.hostSession(), 500);
-                    } else {
-                        this.showToast("Network Error: Could not connect to signal server.", "error");
-                        this.disconnect(true);
-                    }
+                    this.showToast("Server creation failed.", "error");
+                    this.disconnect();
                 });
             },
 
             updateHostDeviceList() {
                 this.els.hostPeerCount.textContent = this.connections.size;
+                
                 if (this.connections.size === 0) {
                     this.els.devicesList.innerHTML = `<div class="text-xs text-slate-500 italic mt-2">No devices connected. Share your code to begin.</div>`;
                     return;
                 }
+
                 let html = '';
                 this.connections.forEach(c => {
                     html += `
@@ -882,20 +775,16 @@
                 this.els.devicesList.innerHTML = html;
             },
 
-            clearPrintQueue() {
-                this.printQueueCount = 0;
-                this.els.queueCount.textContent = '0 Jobs';
-                this.els.queueList.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 space-y-3" id="queue-empty-state"><i class="fas fa-inbox text-4xl"></i><p class="text-sm font-medium">Waiting for incoming print jobs...</p></div>`;
-            },
-
+            // --- Actual Auto-Print Logic (Host) ---
             handleIncomingPrintJob(clientName, data) {
                 this.showToast(`Receiving print job from ${clientName}...`, "success");
                 
                 this.printQueueCount++;
                 this.els.queueCount.textContent = `${this.printQueueCount} Jobs`;
                 
-                const emptyState = document.getElementById('queue-empty-state');
-                if (emptyState) emptyState.remove();
+                if (this.els.queueList.querySelector('.fa-inbox')) {
+                    this.els.queueList.innerHTML = ''; // clear empty state
+                }
 
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
@@ -903,8 +792,6 @@
                 let iconColor = 'text-slate-400';
                 if(data.fileType === 'application/pdf') { iconClass = 'fa-file-pdf'; iconColor = 'text-red-400'; }
                 else if(data.fileType.startsWith('image/')) { iconClass = 'fa-file-image'; iconColor = 'text-brand-400'; }
-
-                const colorModeLabel = data.settings.colorMode === 'bw' ? 'B&W' : 'Color';
 
                 const jobCard = document.createElement('div');
                 jobCard.className = 'bg-black/30 border border-white/5 p-4 rounded-2xl flex items-center gap-4 animate-fade-in shrink-0 relative overflow-hidden group';
@@ -915,108 +802,96 @@
                     </div>
                     <div class="flex-grow min-w-0">
                         <p class="text-sm font-bold text-white truncate">${data.fileName}</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5 font-medium"><i class="fas fa-user-tag text-[10px] text-brand-accent mr-1"></i>${clientName} &nbsp;|&nbsp; ${data.settings.paperSize} &nbsp;|&nbsp; ${data.settings.orientation} &nbsp;|&nbsp; ${colorModeLabel}</p>
+                        <p class="text-xs text-slate-400 mt-0.5"><i class="fas fa-user-tag text-[10px] text-brand-accent mr-1"></i>${clientName} &nbsp;|&nbsp; ${data.settings.paperSize} &nbsp;|&nbsp; ${data.settings.orientation}</p>
                     </div>
                     <div class="text-right flex flex-col items-end">
                         <span class="text-[10px] text-slate-500 font-mono">${time}</span>
                         <span class="text-xs text-brand-accent font-bold mt-1 bg-brand-accent/10 px-2 py-0.5 rounded flex items-center gap-1"><i class="fas fa-check"></i> Sent</span>
                     </div>
                 `;
-                
                 this.els.queueList.prepend(jobCard);
 
-                // Bug #2 Fix: Enforce Queue Limits
-                if (this.els.queueList.children.length > this.printQueueLimit) {
-                    this.els.queueList.removeChild(this.els.queueList.lastChild);
-                }
-
+                // EXECUTING THE PRINT
                 this.executeAutoPrint(data);
             },
 
             executeAutoPrint(data) {
+                // Ensure no old frames exist to prevent memory leaks
                 const oldFrames = document.querySelectorAll('.print-frame');
-                oldFrames.forEach(f => {
-                    // Try to revoke old blobs
-                    try { URL.revokeObjectURL(f.src); } catch(e){}
-                    f.remove();
-                });
+                oldFrames.forEach(f => f.remove());
 
                 const iframe = document.createElement('iframe');
                 iframe.className = 'print-frame';
-                // Add name attribute for targeting if needed
-                iframe.name = `printFrame_${Date.now()}`;
                 document.body.appendChild(iframe);
 
                 const isPDF = data.fileType === 'application/pdf';
                 const isImage = data.fileType.startsWith('image/');
-                const isBW = data.settings.colorMode === 'bw';
-                
-                // Bug #10 Fix: CSS Filter for True B&W (works primarily on images)
-                const filterStyle = isBW ? 'filter: grayscale(100%); -webkit-filter: grayscale(100%);' : '';
 
                 if (isPDF) {
-                    iframe.src = data.blobUrl;
-                    if (isBW) iframe.style.filter = "grayscale(100%)"; 
-
-                    // Bug #3 Fix: Reliable PDF Print Trigger
+                    // Modern browsers handle base64 PDFs well in iframes
+                    iframe.src = data.fileData;
                     iframe.onload = () => {
-                        // PDF plugins need a brief moment to render internally inside the iframe after onload
                         setTimeout(() => {
                             try {
                                 iframe.contentWindow.focus();
                                 iframe.contentWindow.print();
-                                // We don't revokeObjectURL instantly, give the spooler time
                             } catch (e) {
                                 console.error('Print trigger failed', e);
-                                this.showToast('Browser blocked auto-print. Check browser security settings.', 'error');
+                                this.showToast('Browser blocked auto-print. Ensure pop-ups/scripts are allowed.', 'error');
                             }
-                        }, 800); 
+                        }, 800); // Give PDF renderer time
                     };
                 } else if (isImage) {
-                    // Bug #3 & #11 Fix: Strict Image Load Detection
-                    const doc = iframe.contentWindow.document;
-                    doc.open();
-                    doc.write(`
-                        <!DOCTYPE html>
-                        <html>
-                            <head>
-                                <style>
-                                    @page { 
-                                        size: ${data.settings.paperSize} ${data.settings.orientation}; 
-                                        margin: 0; 
-                                    }
-                                    body { 
-                                        margin: 0; 
-                                        display: flex; 
-                                        justify-content: center; 
-                                        align-items: center; 
-                                        height: 100vh; 
-                                        background: white;
-                                    }
-                                    img { 
-                                        max-width: 100%; 
-                                        max-height: 100%; 
-                                        object-fit: contain; 
-                                        ${filterStyle}
-                                    }
-                                </style>
-                            </head>
-                            <body>
-                                <img src="${data.blobUrl}" id="print-img" />
-                                <script>
-                                    document.getElementById('print-img').onload = function() {
-                                        window.focus();
-                                        window.print();
-                                    }
-                                <\/script>
-                            </body>
-                        </html>
-                    `);
-                    doc.close();
+                    const img = new Image();
+                    img.src = data.fileData;
+                    img.onload = () => {
+                        const doc = iframe.contentWindow.document;
+                        doc.open();
+                        // Formatting the document inside the iframe to respect paper size/orientation
+                        doc.write(`
+                            <!DOCTYPE html>
+                            <html>
+                                <head>
+                                    <style>
+                                        @page { 
+                                            size: ${data.settings.paperSize} ${data.settings.orientation}; 
+                                            margin: 0; 
+                                        }
+                                        body { 
+                                            margin: 0; 
+                                            display: flex; 
+                                            justify-content: center; 
+                                            align-items: center; 
+                                            height: 100vh; 
+                                            background: white;
+                                        }
+                                        img { 
+                                            max-width: 100%; 
+                                            max-height: 100%; 
+                                            object-fit: contain; 
+                                        }
+                                    </style>
+                                </head>
+                                <body>
+                                    <img src="${data.fileData}" />
+                                </body>
+                            </html>
+                        `);
+                        doc.close();
+                        
+                        setTimeout(() => {
+                            try {
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Print trigger failed', e);
+                            }
+                        }, 500);
+                    };
                 } else {
                     this.showToast('Unsupported auto-print format. File will download.', 'warning');
                     const a = document.createElement('a');
-                    a.href = data.blobUrl;
+                    a.href = data.fileData;
                     a.download = data.fileName;
                     a.click();
                 }
@@ -1048,7 +923,7 @@
                     const hostId = `shareprint-net-${code}`;
                     this.hostConn = this.peer.connect(hostId, { 
                         reliable: true,
-                        metadata: { name: this.userName, deviceId: this.deviceId }
+                        metadata: { name: this.userName }
                     });
 
                     this.hostConn.on('open', () => {
@@ -1058,7 +933,6 @@
                         this.saveToHistory(code);
                         this.navigate('client');
                         this.updateConnectionBadge();
-                        this.requestWakeLock();
                     });
 
                     this.hostConn.on('data', (data) => {
@@ -1069,42 +943,39 @@
 
                     this.hostConn.on('close', () => {
                         this.showToast("Host ended the print server.", "error");
-                        this.disconnect(false);
+                        this.disconnect();
                     });
 
                     this.hostConn.on('error', () => {
                         this.showToast("Connection dropped.", "error");
-                        this.disconnect(false);
+                        this.disconnect();
                     });
                 });
 
                 this.peer.on('error', (err) => {
-                    // Bug #15 Fix: Restore button state on error
                     this.els.btnJoin.innerHTML = '<i class="fas fa-arrow-right"></i>';
                     this.els.btnJoin.disabled = false;
-                    this.showToast(`Printer code ${code} not found or busy.`, "error");
-                    this.disconnect(false);
+                    this.showToast(`Printer code ${code} not found.`, "error");
+                    this.disconnect();
                 });
             },
 
-            // --- Client File Handling & ArrayBuffer Chunking ---
+            // --- Client File Handling ---
             handleFileSelect(event) {
-                // Bug #12 Fix: Handle both file input and drop
-                let file = null;
-                if (event.target && event.target.files) file = event.target.files[0];
+                const file = event.target.files[0];
                 if (!file) return;
 
-                // Support large files natively, limit artificially at 50MB to prevent client crashes
-                if (file.size > 50 * 1024 * 1024) {
-                    this.showToast('File exceeds 50MB limit.', 'error');
-                    this.resetFileSelector();
+                if (file.size > 20 * 1024 * 1024) {
+                    this.showToast('File exceeds 20MB limit.', 'error');
+                    this.els.fileInput.value = '';
                     return;
                 }
 
+                // Strictly limit to PDF and Images for reliable browser auto-printing
                 const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
                 if (!validTypes.includes(file.type)) {
-                    this.showToast('Only PDFs and Images (JPG/PNG) are supported.', 'error');
-                    this.resetFileSelector();
+                    this.showToast('Only PDFs and Images (JPG/PNG) are supported for auto-printing.', 'error');
+                    this.els.fileInput.value = '';
                     return;
                 }
 
@@ -1122,10 +993,10 @@
 
                 if (file.type === 'application/pdf') {
                     this.els.fileTypeIcon.className = "fas fa-file-pdf text-red-400";
-                    this.els.fileIconWrapper.className = "w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20 text-4xl shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+                    this.els.fileTypeIcon.parentElement.className = "w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20 text-4xl shadow-[0_0_15px_rgba(239,68,68,0.1)]";
                 } else {
                     this.els.fileTypeIcon.className = "fas fa-file-image text-brand-400";
-                    this.els.fileIconWrapper.className = "w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4 border border-brand-500/20 text-4xl shadow-[0_0_15px_rgba(59,130,246,0.1)]";
+                    this.els.fileTypeIcon.parentElement.className = "w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4 border border-brand-500/20 text-4xl shadow-[0_0_15px_rgba(59,130,246,0.1)]";
                 }
 
                 this.els.btnSend.disabled = false;
@@ -1145,105 +1016,34 @@
                 }
             },
 
-            setColorMode(type) {
-                this.printSettings.colorMode = type;
-                const c = document.getElementById('btn-color');
-                const b = document.getElementById('btn-bw');
-                
-                if(type === 'color') {
-                    c.className = 'flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2';
-                    b.className = 'flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2';
-                } else {
-                    b.className = 'flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2';
-                    c.className = 'flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2';
-                }
-            },
-
-            cancelTransfer() {
-                this.isTransferCancelled = true;
-                this.els.uploadOverlay.classList.add('hidden');
-                this.els.uploadOverlay.classList.remove('flex');
-            },
-
-            async sendPrintJob() {
+            sendPrintJob() {
                 if(!this.selectedFile || !this.hostConn || !this.hostConn.open) {
                     this.showToast('Printer connection lost.', 'error');
                     return;
                 }
 
                 this.printSettings.paperSize = document.getElementById('paper-size').value;
-                this.isTransferCancelled = false;
-                
-                this.els.uploadProgressText.textContent = "0%";
-                this.els.uploadSpeedText.textContent = "Calculating speed...";
-                this.els.uploadProgressCircle.style.strokeDashoffset = "283";
                 this.els.uploadOverlay.classList.remove('hidden');
                 this.els.uploadOverlay.classList.add('flex');
 
                 const reader = new FileReader();
-                // Bug #19 Fix: Read as ArrayBuffer for binary transfer. Vastly superior performance.
-                reader.onload = async (e) => {
-                    const arrayBuffer = e.target.result;
-                    
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
                     try {
-                        const jobId = Math.random().toString(36).substr(2, 9);
-                        const CHUNK_SIZE = 128 * 1024; // 128KB chunks for WebRTC binary
-                        const totalChunks = Math.ceil(arrayBuffer.byteLength / CHUNK_SIZE);
-
                         this.hostConn.send({
-                            type: 'print-job-start',
-                            jobId: jobId,
+                            type: 'print-job',
                             fileName: this.selectedFile.name,
                             fileType: this.selectedFile.type,
-                            totalChunks: totalChunks,
+                            fileData: dataUrl,
                             settings: this.printSettings
                         });
-
-                        const startTime = Date.now();
-                        let bytesSent = 0;
-
-                        for (let i = 0; i < totalChunks; i++) {
-                            // Bug #20 Fix: Cancellation check
-                            if (this.isTransferCancelled) {
-                                this.hostConn.send({ type: 'print-job-cancel', jobId: jobId });
-                                this.showToast('Transfer cancelled', 'warning');
-                                return;
-                            }
-
-                            const chunk = arrayBuffer.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                            this.hostConn.send({
-                                type: 'print-job-chunk',
-                                jobId: jobId,
-                                chunkIndex: i,
-                                data: chunk // Sending binary directly
-                            });
-
-                            bytesSent += chunk.byteLength;
-
-                            // Micro-delay to avoid WebRTC buffer flooding
-                            if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
-
-                            // Update Progress & Speed
-                            const percent = Math.round(((i + 1) / totalChunks) * 100);
-                            this.els.uploadProgressText.textContent = `${percent}%`;
-                            this.els.uploadProgressCircle.style.strokeDashoffset = 283 - (283 * percent) / 100;
-                            
-                            const elapsedSec = (Date.now() - startTime) / 1000;
-                            if (elapsedSec > 0.5) {
-                                const mbps = (bytesSent / 1024 / 1024) / elapsedSec;
-                                this.els.uploadSpeedText.textContent = `${mbps.toFixed(1)} MB/s`;
-                            }
-                        }
-
-                        this.hostConn.send({ type: 'print-job-end', jobId: jobId });
                         
                         setTimeout(() => {
                             this.els.uploadOverlay.classList.add('hidden');
                             this.els.uploadOverlay.classList.remove('flex');
                             this.showToast('Sent to printer successfully!', 'success');
                             this.resetFileSelector();
-                        }, 500);
-
+                        }, 800); // UI visual delay
                     } catch (err) {
                         this.els.uploadOverlay.classList.add('hidden');
                         this.els.uploadOverlay.classList.remove('flex');
@@ -1256,7 +1056,7 @@
                     this.showToast('Error processing file locally.', 'error');
                 };
                 
-                reader.readAsArrayBuffer(this.selectedFile);
+                reader.readAsDataURL(this.selectedFile);
             },
 
             resetFileSelector() {
@@ -1267,11 +1067,6 @@
                 this.els.fileInitial.classList.remove('hidden');
                 this.els.fileInitial.classList.add('flex');
                 this.els.btnSend.disabled = true;
-                
-                // Bug #16 Fix: reset settings to default
-                this.setOrientation('portrait');
-                this.setColorMode('color');
-                document.getElementById('paper-size').value = 'A4';
             },
 
             // --- History ---
@@ -1306,7 +1101,7 @@
                 this.els.recentContainer.classList.add('flex');
                 
                 this.els.recentList.innerHTML = history.map(code => `
-                    <button onclick="app.els.joinInput.value='${code}'; app.joinSession()" aria-label="Join Recent Printer ${code}" class="flex-shrink-0 bg-white/5 px-4 py-2.5 rounded-xl hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/5 active:scale-95">
+                    <button onclick="app.els.joinInput.value='${code}'; app.joinSession()" class="flex-shrink-0 bg-white/5 px-4 py-2.5 rounded-xl hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/5 active:scale-95">
                         <span class="font-mono font-bold tracking-widest text-slate-300">${code}</span>
                         <div class="w-1 h-1 rounded-full bg-brand-400"></div>
                         <span class="text-[10px] text-slate-500 uppercase tracking-wide">Connect</span>
@@ -1357,39 +1152,27 @@
                             }
                             if(parsedCode && /^\d{5}$/.test(parsedCode)) {
                                 this.isJoining = true;
-                                this.html5QrcodeScanner.stop().catch(e=>{}).finally(() => this.joinCore(parsedCode));
+                                try {
+                                    this.html5QrcodeScanner.stop().catch(e=>{}).finally(() => this.joinCore(parsedCode));
+                                } catch(e) { this.joinCore(parsedCode); }
                             }
                         },
                         (err) => {}
                     ).catch(() => {
-                        // Bug #5 Fix: reset flag on error
-                        this.isJoining = false;
                         this.showToast("Camera access denied.", "error");
                         this.navigate('home');
                     });
                 }, 400);
             },
 
-            async closeScanner() {
-                // Bug #5 & #18 Fix: Await stop and proper cleanup
-                this.isJoining = false;
+            closeScanner() {
                 if (this.html5QrcodeScanner) {
-                    try { 
-                        await this.html5QrcodeScanner.stop(); 
-                        this.html5QrcodeScanner.clear();
-                    } catch(e) {}
-                }
-                this.navigate('home');
+                    try { this.html5QrcodeScanner.stop().catch(e=>{}).finally(() => this.navigate('home')); } 
+                    catch(e) { this.navigate('home'); }
+                } else this.navigate('home');
             },
 
-            disconnect(isHostDisconnecting) {
-                // Add a confirmation dialog before stopping server
-                if (isHostDisconnecting && this.isHost) {
-                    if(!confirm("Are you sure you want to stop the Print Server? All connected devices will be disconnected.")) {
-                        return;
-                    }
-                }
-
+            disconnect() {
                 this.els.btnCreate.innerHTML = 'Start Print Server';
                 this.els.btnCreate.disabled = false;
                 this.els.btnJoin.innerHTML = '<i class="fas fa-arrow-right"></i>';
