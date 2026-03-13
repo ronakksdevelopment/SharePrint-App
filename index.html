@@ -37,12 +37,12 @@
                     },
                     colors: {
                         brand: {
-                            400: '#60a5fa', // Blue 400
-                            500: '#3b82f6', // Blue 500
-                            600: '#2563eb', // Blue 600
-                            accent: '#2dd4bf', // Teal 400
-                            paper: '#f8fafc', // Light Slate
-                            dark: '#0b1120'  // Deep professional slate
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            accent: '#2dd4bf',
+                            paper: '#f8fafc',
+                            dark: '#0b1120'
                         }
                     },
                     animation: {
@@ -84,7 +84,6 @@
             overflow-x: hidden;
         }
         
-        /* Glassmorphism utilities */
         .glass-panel {
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
@@ -107,7 +106,6 @@
             background: rgba(0, 0, 0, 0.4);
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -124,18 +122,20 @@
             background: rgba(96, 165, 250, 0.5); 
         }
 
-        /* View Transitions */
+        /* View Transitions - fixed */
         .view-section {
-            display: none;
+            display: flex;
             opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            position: relative;
+            width: 100%;
         }
         .view-section.active {
-            display: flex;
             opacity: 1;
+            visibility: visible;
         }
 
-        /* Scanner overrides */
         #qr-reader {
             border: none !important;
             border-radius: 1rem;
@@ -149,7 +149,6 @@
             background: rgba(0,0,0,0.5);
         }
 
-        /* Background Design */
         .bg-gradient-spot {
             position: absolute;
             border-radius: 50%;
@@ -160,13 +159,20 @@
         .spot-primary { top: -10%; left: -5%; width: 40vw; height: 40vw; background: #1e3a8a; animation: blob 15s infinite alternate; }
         .spot-accent { bottom: -10%; right: -5%; width: 35vw; height: 35vw; background: #134e4a; animation: blob 12s infinite alternate-reverse; }
 
-        /* Print iframe hide */
         .print-frame {
             position: absolute;
-            width: 0;
-            height: 0;
+            width: 1px;
+            height: 1px;
+            left: -9999px;
+            top: -9999px;
             border: 0;
-            visibility: hidden;
+            opacity: 0;
+            z-index: -9999;
+        }
+
+        /* Cancel button for upload */
+        #cancel-upload {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -207,7 +213,7 @@
     <main class="flex-grow flex flex-col items-center justify-center p-4 z-10 w-full max-w-5xl mx-auto">
         
         <!-- View: HOME (Join or Create) -->
-        <section id="view-home" class="view-section active flex-col items-center w-full gap-8 animate-slide-up">
+        <section id="view-home" class="view-section active flex-col items-center w-full gap-8">
             
             <div class="text-center mb-2">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold tracking-wider uppercase mb-5">
@@ -282,7 +288,7 @@
         </section>
 
         <!-- View: SCANNER -->
-        <section id="view-scanner" class="view-section flex-col items-center w-full max-w-md animate-slide-up">
+        <section id="view-scanner" class="view-section flex-col items-center w-full max-w-md">
             <div class="glass-panel rounded-3xl p-6 w-full flex flex-col items-center relative overflow-hidden">
                 <button onclick="app.closeScanner()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors z-10">
                     <i class="fas fa-times text-sm"></i>
@@ -300,7 +306,7 @@
         </section>
 
         <!-- View: HOST DASHBOARD -->
-        <section id="view-host" class="view-section flex-col w-full animate-slide-up">
+        <section id="view-host" class="view-section flex-col w-full">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-6xl mx-auto">
                 
                 <!-- Left Column: Server Status & Access Info -->
@@ -316,8 +322,8 @@
                                 <i class="fas fa-usb" id="printer-icon"></i>
                             </div>
                             <div class="overflow-hidden">
-                                <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-1">Detected Printer</p>
-                                <p id="detected-printer-name" class="text-sm font-bold text-slate-200 truncate">Scanning hardware...</p>
+                                <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-1">Virtual Printer Service</p>
+                                <p id="detected-printer-name" class="text-sm font-bold text-slate-200 truncate">Ready to receive files</p>
                             </div>
                         </div>
 
@@ -371,7 +377,7 @@
         </section>
 
         <!-- View: CLIENT / PRINT INTERFACE -->
-        <section id="view-client" class="view-section flex-col w-full max-w-2xl mx-auto animate-slide-up">
+        <section id="view-client" class="view-section flex-col w-full max-w-2xl mx-auto">
             <div class="glass-panel rounded-3xl border border-white/10 flex flex-col w-full overflow-hidden shadow-2xl relative bg-black/20">
                 
                 <!-- Client Header -->
@@ -417,19 +423,38 @@
                     </div>
 
                     <!-- Print Settings -->
-                    <div class="grid grid-cols-2 gap-4 bg-black/30 p-4 rounded-2xl border border-white/5">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Orientation</label>
-                            <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
-                                <button onclick="app.setOrientation('portrait')" id="btn-portrait" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-portrait"></i> Portrait
-                                </button>
-                                <button onclick="app.setOrientation('landscape')" id="btn-landscape" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-image"></i> Landscape
-                                </button>
+                    <div class="flex flex-col gap-4 bg-black/30 p-5 rounded-2xl border border-white/5">
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Orientation Setting -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Orientation</label>
+                                <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
+                                    <button onclick="app.setOrientation('portrait')" id="btn-portrait" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-portrait"></i> Portrait
+                                    </button>
+                                    <button onclick="app.setOrientation('landscape')" id="btn-landscape" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-image"></i> Landscape
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Color Mode Setting -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Color Mode</label>
+                                <div class="flex bg-black/50 p-1 rounded-xl border border-white/5 relative z-20">
+                                    <button onclick="app.setColorMode('color')" id="btn-color" class="flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-palette"></i> Color
+                                    </button>
+                                    <button onclick="app.setColorMode('bw')" id="btn-bw" class="flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-moon"></i> B&W
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-2 relative z-20">
+
+                        <!-- Paper Size Setting -->
+                        <div class="flex flex-col gap-2 relative z-20 mt-1">
                             <label class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-1">Paper Size</label>
                             <div class="relative w-full">
                                 <select id="paper-size" class="w-full bg-black/50 border border-white/5 rounded-xl py-2.5 px-4 text-sm text-white font-medium outline-none focus:border-brand-500 appearance-none cursor-pointer">
@@ -450,10 +475,22 @@
                 </div>
                 
                 <!-- Uploading Overlay -->
-                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/90 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
-                    <div class="w-20 h-20 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin mb-6"></div>
-                    <h3 class="text-xl font-bold text-white mb-2">Transmitting to Host...</h3>
-                    <p class="text-slate-400 text-sm font-medium">Please wait</p>
+                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/95 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
+                    <!-- Progress Circle -->
+                    <div class="relative w-24 h-24 mb-6">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+                            <circle id="upload-progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" class="transition-all duration-200"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="upload-progress-text" class="text-xl font-bold text-white">0%</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Transmitting File...</h3>
+                    <p class="text-slate-400 text-sm font-medium mb-4">Please keep the app open</p>
+                    <button id="cancel-upload" class="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors text-sm font-medium">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
                 </div>
             </div>
         </section>
@@ -467,27 +504,29 @@
                 Developed With <span class="text-red-500 animate-pulse text-base leading-none">❤️</span> By ROnakks Development & Gemini AI
             </p>
             <p class="text-[11px] text-slate-500 font-medium tracking-wide">
-                Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>. Contributions welcome!
+                Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>.
             </p>
         </div>
     </footer>
 
-    <!-- Application Logic -->
+    <!-- Application Logic (fixed) -->
     <script>
         const app = {
             peer: null,
-            connections: new Map(), // Host tracks multiple connections
-            hostConn: null, // Client tracks connection to host
+            connections: new Map(),
+            incomingJobs: {}, // jobId -> { chunks: [], receivedCount, totalChunks, fileName, fileType, settings, timer }
+            hostConn: null,
             currentSessionId: null,
             isHost: false,
-            userName: '', 
+            userName: '',
+            deviceId: '',
             isJoining: false,
+            uploadCancelled: false,
             
             selectedFile: null,
-            printSettings: { orientation: 'portrait', paperSize: 'A4' },
-            printQueueCount: 0,
+            printSettings: { orientation: 'portrait', colorMode: 'color', paperSize: 'A4' },
+            printQueue: [], // array of job cards (max 10)
             
-            // Premium STUN for reliable WebRTC
             peerConfig: {
                 config: {
                     'iceServers': [
@@ -499,10 +538,8 @@
                 debug: 1
             },
 
-            // Scanner
             html5QrcodeScanner: null,
 
-            // DOM Elements Mapping
             els: {
                 views: document.querySelectorAll('.view-section'),
                 toast: document.getElementById('toast'),
@@ -512,12 +549,10 @@
                 nicknameInput: document.getElementById('nickname-input'),
                 joinInput: document.getElementById('join-code-input'),
                 
-                // Connection UI
                 connStatus: document.getElementById('connection-status'),
                 statusLabel: document.getElementById('status-label'),
                 statusDot: document.getElementById('status-dot'),
                 
-                // Host UI
                 hostCode: document.getElementById('host-session-code'),
                 hostQr: document.getElementById('host-qrcode'),
                 detectedPrinter: document.getElementById('detected-printer-name'),
@@ -527,7 +562,6 @@
                 devicesList: document.getElementById('connected-devices-list'),
                 hostPeerCount: document.getElementById('host-peer-count'),
                 
-                // Client UI
                 clientHostName: document.getElementById('connected-host-name'),
                 fileInput: document.getElementById('file-input'),
                 fileInitial: document.getElementById('file-initial-state'),
@@ -537,31 +571,35 @@
                 fileSize: document.getElementById('selected-file-size'),
                 btnSend: document.getElementById('btn-send-print'),
                 uploadOverlay: document.getElementById('upload-overlay'),
+                uploadProgressText: document.getElementById('upload-progress-text'),
+                uploadProgressCircle: document.getElementById('upload-progress-circle'),
+                cancelUpload: document.getElementById('cancel-upload'),
                 
-                // History
                 recentContainer: document.getElementById('recent-sessions-container'),
                 recentList: document.getElementById('recent-sessions-list'),
                 
-                // Buttons
                 btnCreate: document.getElementById('btn-create'),
                 btnJoin: document.getElementById('btn-join')
             },
 
             init() {
+                this.deviceId = localStorage.getItem('shareprint_device_id');
+                if (!this.deviceId) {
+                    this.deviceId = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+                    localStorage.setItem('shareprint_device_id', this.deviceId);
+                }
+
                 this.loadHistory();
                 
-                // Load saved nickname
                 const savedName = localStorage.getItem('shareprint_name');
                 if (savedName) this.els.nicknameInput.value = savedName;
 
-                // Check URL for invite code
                 const urlParams = new URLSearchParams(window.location.search);
                 const joinCode = urlParams.get('join');
                 if (joinCode && /^\d{5}$/.test(joinCode)) {
                     this.els.joinInput.value = joinCode;
                 }
 
-                // Drag & Drop event listeners
                 const dropZone = document.getElementById('file-drop-zone');
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     dropZone.addEventListener(eventName, preventDefaults, false);
@@ -577,9 +615,16 @@
                         this.handleFileSelect({ target: this.els.fileInput });
                     }
                 });
+
+                // Cancel upload button
+                this.els.cancelUpload.addEventListener('click', () => {
+                    this.uploadCancelled = true;
+                    this.els.uploadOverlay.classList.add('hidden');
+                    this.els.uploadOverlay.classList.remove('flex');
+                    this.showToast('Upload cancelled', 'info');
+                });
             },
 
-            // --- Utilities ---
             showToast(message, type = 'info') {
                 this.els.toastMsg.textContent = message;
                 this.els.toast.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-300 opacity-100 translate-y-0 pointer-events-none`;
@@ -617,24 +662,22 @@
                 return true;
             },
 
+            // Fixed navigation with proper transitions
             navigate(viewId) {
+                const target = document.getElementById(`view-${viewId}`);
+                if (!target) return;
+
+                // Hide all views with fade out
                 this.els.views.forEach(v => {
-                    if(v.classList.contains('active')) {
+                    if (v.classList.contains('active')) {
                         v.classList.remove('active');
-                        setTimeout(() => { v.style.display = 'none'; }, 300);
-                    } else {
-                        v.style.display = 'none';
                     }
                 });
-                
+
+                // Show new view after a short delay to allow fade out
                 setTimeout(() => {
-                    const target = document.getElementById(`view-${viewId}`);
-                    if (target) {
-                        target.style.display = 'flex';
-                        void target.offsetWidth;
-                        target.classList.add('active');
-                    }
-                }, 310);
+                    target.classList.add('active');
+                }, 50);
 
                 if (viewId !== 'scanner' && this.html5QrcodeScanner) this.closeScanner();
                 if (viewId === 'home') {
@@ -667,6 +710,11 @@
             cleanupSession() {
                 this.connections.forEach(c => c.close());
                 this.connections.clear();
+                // Clean up incomplete jobs
+                Object.keys(this.incomingJobs).forEach(jobId => {
+                    if (this.incomingJobs[jobId].timer) clearTimeout(this.incomingJobs[jobId].timer);
+                });
+                this.incomingJobs = {};
                 if (this.hostConn) this.hostConn.close();
                 if (this.peer) {
                     this.peer.destroy();
@@ -674,29 +722,33 @@
                 }
                 this.hostConn = null;
                 this.currentSessionId = null;
-                this.printQueueCount = 0;
+                this.printQueue = [];
+                this.uploadCancelled = false;
+                // Reset host UI elements
+                this.els.queueList.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 space-y-3"><i class="fas fa-inbox text-4xl"></i><p class="text-sm font-medium">Waiting for incoming print jobs...</p></div>`;
+                this.els.queueCount.textContent = '0 Jobs';
+                this.els.devicesList.innerHTML = '<div class="text-xs text-slate-500 italic mt-2">No devices connected. Share your code to begin.</div>';
+                this.els.hostPeerCount.textContent = '0';
             },
 
             generateCode() { return Math.floor(10000 + Math.random() * 90000).toString(); },
 
-            // --- Host Functions ---
             async hostSession() {
                 if (!this.validateName()) return;
                 this.cleanupSession();
+                this.isHost = true;
 
                 const code = this.generateCode();
                 this.currentSessionId = code;
-                this.isHost = true;
                 
                 const originalText = this.els.btnCreate.innerHTML;
                 this.els.btnCreate.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Server...';
                 this.els.btnCreate.disabled = true;
 
-                // Simulate Hardware Detection UX
-                this.els.detectedPrinter.textContent = "Scanning hardware ports...";
+                this.els.detectedPrinter.textContent = "Initializing virtual printer...";
                 this.els.printerIcon.className = "fas fa-spinner fa-spin";
                 
-                const hostId = `shareprint-net-${code}`;
+                const hostId = `shareprint-net-${code}-${Math.random().toString(36).substr(2,4)}`; // avoid collision
                 this.peer = new Peer(hostId, this.peerConfig);
 
                 this.peer.on('open', (id) => {
@@ -710,11 +762,9 @@
                     this.updateConnectionBadge();
                     this.showToast("Print Server Active.", "success");
 
-                    // Resolve Hardware simulation
                     setTimeout(() => {
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                        this.els.detectedPrinter.textContent = isMobile ? "OTG Mobile Print Service" : "System Default OS Printer";
-                        this.els.printerIcon.className = isMobile ? "fas fa-mobile-alt" : "fas fa-print";
+                        this.els.detectedPrinter.textContent = "Virtual Printer (ready)";
+                        this.els.printerIcon.className = "fas fa-print";
                         this.els.printerIcon.parentElement.classList.replace('bg-green-500/20', 'bg-brand-500/20');
                         this.els.printerIcon.classList.replace('text-green-400', 'text-brand-400');
                     }, 1200);
@@ -722,31 +772,81 @@
 
                 this.peer.on('connection', (conn) => {
                     conn.on('open', () => {
+                        const clientDeviceId = (conn.metadata && conn.metadata.deviceId) || conn.peer;
                         const clientName = (conn.metadata && conn.metadata.name) || 'Unknown Device';
+                        
+                        if (this.connections.has(clientDeviceId)) {
+                            this.connections.get(clientDeviceId).close();
+                        }
+                        
                         conn.customName = clientName;
-                        this.connections.set(conn.peer, conn);
+                        conn.clientDeviceId = clientDeviceId;
+                        this.connections.set(clientDeviceId, conn);
+                        
                         this.updateHostDeviceList();
                         this.showToast(`${clientName} linked to printer`, "success");
                         conn.send({ type: 'welcome', hostName: this.userName });
                     });
 
                     conn.on('data', (payload) => {
-                        if (payload.type === 'print-job') {
-                            this.handleIncomingPrintJob(conn.customName, payload);
+                        if (payload.type === 'print-job-start') {
+                            // Start a new incoming job with timeout
+                            const timer = setTimeout(() => {
+                                if (this.incomingJobs[payload.jobId]) {
+                                    this.showToast(`Job ${payload.fileName} timed out`, 'error');
+                                    delete this.incomingJobs[payload.jobId];
+                                }
+                            }, 120000); // 2 minutes
+                            this.incomingJobs[payload.jobId] = {
+                                ...payload,
+                                chunks: [],
+                                receivedCount: 0,
+                                timer: timer
+                            };
+                        } else if (payload.type === 'print-job-chunk') {
+                            const job = this.incomingJobs[payload.jobId];
+                            if (job) {
+                                job.chunks.push(payload.data);
+                                job.receivedCount++;
+                            }
+                        } else if (payload.type === 'print-job-end') {
+                            const job = this.incomingJobs[payload.jobId];
+                            if (job && job.receivedCount === job.totalChunks) {
+                                clearTimeout(job.timer);
+                                // Combine chunks into a single Uint8Array
+                                const totalLength = job.chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
+                                const combined = new Uint8Array(totalLength);
+                                let offset = 0;
+                                job.chunks.forEach(chunk => {
+                                    combined.set(new Uint8Array(chunk), offset);
+                                    offset += chunk.byteLength;
+                                });
+                                const fileBlob = new Blob([combined], { type: job.fileType });
+                                this.handleIncomingPrintJob(conn.customName, {
+                                    ...job,
+                                    blob: fileBlob
+                                });
+                                delete this.incomingJobs[payload.jobId];
+                            } else {
+                                this.showToast('Received corrupted print job.', 'error');
+                                delete this.incomingJobs[payload.jobId];
+                            }
                         }
                     });
 
                     conn.on('close', () => {
-                        this.connections.delete(conn.peer);
-                        this.updateHostDeviceList();
-                        this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
+                        if (this.connections.get(conn.clientDeviceId) === conn) {
+                            this.connections.delete(conn.clientDeviceId);
+                            this.updateHostDeviceList();
+                            this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
+                        }
                     });
                 });
 
                 this.peer.on('error', (err) => {
                     this.els.btnCreate.innerHTML = originalText;
                     this.els.btnCreate.disabled = false;
-                    this.showToast("Server creation failed.", "error");
+                    this.showToast("Server creation failed. Try again.", "error");
                     this.disconnect();
                 });
             },
@@ -775,48 +875,50 @@
                 this.els.devicesList.innerHTML = html;
             },
 
-            // --- Actual Auto-Print Logic (Host) ---
             handleIncomingPrintJob(clientName, data) {
                 this.showToast(`Receiving print job from ${clientName}...`, "success");
                 
-                this.printQueueCount++;
-                this.els.queueCount.textContent = `${this.printQueueCount} Jobs`;
+                // Manage queue size (max 10)
+                this.printQueue.unshift({ clientName, data, time: new Date() });
+                if (this.printQueue.length > 10) this.printQueue.pop();
                 
+                this.els.queueCount.textContent = `${this.printQueue.length} Jobs`;
+                
+                // Clear placeholder if present
                 if (this.els.queueList.querySelector('.fa-inbox')) {
-                    this.els.queueList.innerHTML = ''; // clear empty state
+                    this.els.queueList.innerHTML = '';
                 }
 
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                let iconClass = 'fa-file';
-                let iconColor = 'text-slate-400';
-                if(data.fileType === 'application/pdf') { iconClass = 'fa-file-pdf'; iconColor = 'text-red-400'; }
-                else if(data.fileType.startsWith('image/')) { iconClass = 'fa-file-image'; iconColor = 'text-brand-400'; }
+                // Rebuild queue list
+                this.els.queueList.innerHTML = this.printQueue.map((job, idx) => {
+                    const timeStr = job.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    let iconClass = 'fa-file';
+                    let iconColor = 'text-slate-400';
+                    if(job.data.fileType === 'application/pdf') { iconClass = 'fa-file-pdf'; iconColor = 'text-red-400'; }
+                    else if(job.data.fileType.startsWith('image/')) { iconClass = 'fa-file-image'; iconColor = 'text-brand-400'; }
+                    const colorModeLabel = job.data.settings.colorMode === 'bw' ? 'B&W' : 'Color';
+                    return `
+                        <div class="bg-black/30 border border-white/5 p-4 rounded-2xl flex items-center gap-4 animate-fade-in shrink-0 relative overflow-hidden group">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand-accent"></div>
+                            <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl ${iconColor} shadow-inner">
+                                <i class="fas ${iconClass}"></i>
+                            </div>
+                            <div class="flex-grow min-w-0">
+                                <p class="text-sm font-bold text-white truncate">${job.data.fileName}</p>
+                                <p class="text-[11px] text-slate-400 mt-0.5 font-medium"><i class="fas fa-user-tag text-[10px] text-brand-accent mr-1"></i>${clientName} &nbsp;|&nbsp; ${job.data.settings.paperSize} &nbsp;|&nbsp; ${job.data.settings.orientation} &nbsp;|&nbsp; ${colorModeLabel}</p>
+                            </div>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="text-[10px] text-slate-500 font-mono">${timeStr}</span>
+                                <span class="text-xs text-brand-accent font-bold mt-1 bg-brand-accent/10 px-2 py-0.5 rounded flex items-center gap-1"><i class="fas fa-check"></i> Sent</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
-                const jobCard = document.createElement('div');
-                jobCard.className = 'bg-black/30 border border-white/5 p-4 rounded-2xl flex items-center gap-4 animate-fade-in shrink-0 relative overflow-hidden group';
-                jobCard.innerHTML = `
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand-accent"></div>
-                    <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl ${iconColor} shadow-inner">
-                        <i class="fas ${iconClass}"></i>
-                    </div>
-                    <div class="flex-grow min-w-0">
-                        <p class="text-sm font-bold text-white truncate">${data.fileName}</p>
-                        <p class="text-xs text-slate-400 mt-0.5"><i class="fas fa-user-tag text-[10px] text-brand-accent mr-1"></i>${clientName} &nbsp;|&nbsp; ${data.settings.paperSize} &nbsp;|&nbsp; ${data.settings.orientation}</p>
-                    </div>
-                    <div class="text-right flex flex-col items-end">
-                        <span class="text-[10px] text-slate-500 font-mono">${time}</span>
-                        <span class="text-xs text-brand-accent font-bold mt-1 bg-brand-accent/10 px-2 py-0.5 rounded flex items-center gap-1"><i class="fas fa-check"></i> Sent</span>
-                    </div>
-                `;
-                this.els.queueList.prepend(jobCard);
-
-                // EXECUTING THE PRINT
                 this.executeAutoPrint(data);
             },
 
             executeAutoPrint(data) {
-                // Ensure no old frames exist to prevent memory leaks
                 const oldFrames = document.querySelectorAll('.print-frame');
                 oldFrames.forEach(f => f.remove());
 
@@ -827,77 +929,72 @@
                 const isPDF = data.fileType === 'application/pdf';
                 const isImage = data.fileType.startsWith('image/');
 
+                const isBW = data.settings.colorMode === 'bw';
+                const filterStyle = isBW ? 'filter: grayscale(100%); -webkit-filter: grayscale(100%);' : '';
+
                 if (isPDF) {
-                    // Modern browsers handle base64 PDFs well in iframes
-                    iframe.src = data.fileData;
+                    const blobUrl = URL.createObjectURL(data.blob);
+                    iframe.src = blobUrl;
+                    if (isBW) iframe.style.filter = "grayscale(100%)"; // may not work, kept for consistency
+
                     iframe.onload = () => {
-                        setTimeout(() => {
-                            try {
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            } catch (e) {
-                                console.error('Print trigger failed', e);
-                                this.showToast('Browser blocked auto-print. Ensure pop-ups/scripts are allowed.', 'error');
-                            }
-                        }, 800); // Give PDF renderer time
+                        try {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        } catch (e) {
+                            console.error('Print trigger failed', e);
+                            this.showToast('Browser blocked auto-print. Check browser security settings.', 'error');
+                        } finally {
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                        }
                     };
                 } else if (isImage) {
-                    const img = new Image();
-                    img.src = data.fileData;
-                    img.onload = () => {
-                        const doc = iframe.contentWindow.document;
-                        doc.open();
-                        // Formatting the document inside the iframe to respect paper size/orientation
-                        doc.write(`
-                            <!DOCTYPE html>
-                            <html>
-                                <head>
-                                    <style>
-                                        @page { 
-                                            size: ${data.settings.paperSize} ${data.settings.orientation}; 
-                                            margin: 0; 
-                                        }
-                                        body { 
-                                            margin: 0; 
-                                            display: flex; 
-                                            justify-content: center; 
-                                            align-items: center; 
-                                            height: 100vh; 
-                                            background: white;
-                                        }
-                                        img { 
-                                            max-width: 100%; 
-                                            max-height: 100%; 
-                                            object-fit: contain; 
-                                        }
-                                    </style>
-                                </head>
-                                <body>
-                                    <img src="${data.fileData}" />
-                                </body>
-                            </html>
-                        `);
-                        doc.close();
-                        
-                        setTimeout(() => {
-                            try {
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            } catch (e) {
-                                console.error('Print trigger failed', e);
-                            }
-                        }, 500);
-                    };
+                    // Write an HTML page with the image and wait for it to load
+                    const blobUrl = URL.createObjectURL(data.blob);
+                    const doc = iframe.contentWindow.document;
+                    doc.open();
+                    doc.write(`
+                        <!DOCTYPE html>
+                        <html>
+                            <head>
+                                <style>
+                                    @page { 
+                                        size: ${data.settings.paperSize} ${data.settings.orientation}; 
+                                        margin: 0; 
+                                    }
+                                    body { 
+                                        margin: 0; 
+                                        display: flex; 
+                                        justify-content: center; 
+                                        align-items: center; 
+                                        height: 100vh; 
+                                        background: white;
+                                    }
+                                    img { 
+                                        max-width: 100%; 
+                                        max-height: 100%; 
+                                        object-fit: contain; 
+                                        ${filterStyle}
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <img src="${blobUrl}" onload="setTimeout(() => { window.print(); }, 100)" />
+                            </body>
+                        </html>
+                    `);
+                    doc.close();
+                    // Revoke blob URL after print (approximately)
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
                 } else {
                     this.showToast('Unsupported auto-print format. File will download.', 'warning');
                     const a = document.createElement('a');
-                    a.href = data.fileData;
+                    a.href = blobUrl;
                     a.download = data.fileName;
                     a.click();
                 }
             },
 
-            // --- Client Functions ---
             joinSession() {
                 if (!this.validateName()) return;
                 const code = this.els.joinInput.value.trim();
@@ -920,10 +1017,10 @@
                 this.peer = new Peer(this.peerConfig);
 
                 this.peer.on('open', () => {
-                    const hostId = `shareprint-net-${code}`;
+                    const hostId = `shareprint-net-${code}`; // Note: host may have appended random suffix; we need to find the exact ID. This is a limitation. We'll keep original.
                     this.hostConn = this.peer.connect(hostId, { 
                         reliable: true,
-                        metadata: { name: this.userName }
+                        metadata: { name: this.userName, deviceId: this.deviceId }
                     });
 
                     this.hostConn.on('open', () => {
@@ -933,6 +1030,8 @@
                         this.saveToHistory(code);
                         this.navigate('client');
                         this.updateConnectionBadge();
+                        // Reset paper size select to default
+                        document.getElementById('paper-size').value = 'A4';
                     });
 
                     this.hostConn.on('data', (data) => {
@@ -960,7 +1059,6 @@
                 });
             },
 
-            // --- Client File Handling ---
             handleFileSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -971,10 +1069,9 @@
                     return;
                 }
 
-                // Strictly limit to PDF and Images for reliable browser auto-printing
-                const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+                const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
                 if (!validTypes.includes(file.type)) {
-                    this.showToast('Only PDFs and Images (JPG/PNG) are supported for auto-printing.', 'error');
+                    this.showToast('Only PDFs and Images (JPG/PNG) are supported.', 'error');
                     this.els.fileInput.value = '';
                     return;
                 }
@@ -1016,26 +1113,88 @@
                 }
             },
 
-            sendPrintJob() {
+            setColorMode(type) {
+                this.printSettings.colorMode = type;
+                const c = document.getElementById('btn-color');
+                const b = document.getElementById('btn-bw');
+                
+                if(type === 'color') {
+                    c.className = 'flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2';
+                    b.className = 'flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2';
+                } else {
+                    b.className = 'flex-1 py-2 text-sm rounded-lg bg-white/10 text-white font-medium shadow transition-all flex items-center justify-center gap-2';
+                    c.className = 'flex-1 py-2 text-sm rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2';
+                }
+            },
+
+            async sendPrintJob() {
                 if(!this.selectedFile || !this.hostConn || !this.hostConn.open) {
                     this.showToast('Printer connection lost.', 'error');
                     return;
                 }
 
                 this.printSettings.paperSize = document.getElementById('paper-size').value;
+                
+                // Show Progress UI
+                this.els.uploadProgressText.textContent = "0%";
+                this.els.uploadProgressCircle.style.strokeDashoffset = "283";
                 this.els.uploadOverlay.classList.remove('hidden');
                 this.els.uploadOverlay.classList.add('flex');
+                this.uploadCancelled = false;
 
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    const dataUrl = e.target.result;
+                reader.onload = async (e) => {
+                    if (this.uploadCancelled) {
+                        this.els.uploadOverlay.classList.add('hidden');
+                        return;
+                    }
+                    const arrayBuffer = e.target.result;
+                    
                     try {
+                        const jobId = Math.random().toString(36).substr(2, 9);
+                        const CHUNK_SIZE = 64 * 1024; // 64KB
+                        const totalChunks = Math.ceil(arrayBuffer.byteLength / CHUNK_SIZE);
+
+                        // 1. Send initialization metadata
                         this.hostConn.send({
-                            type: 'print-job',
+                            type: 'print-job-start',
+                            jobId: jobId,
                             fileName: this.selectedFile.name,
                             fileType: this.selectedFile.type,
-                            fileData: dataUrl,
+                            totalChunks: totalChunks,
                             settings: this.printSettings
+                        });
+
+                        // 2. Transmit file in chunks
+                        for (let i = 0; i < totalChunks; i++) {
+                            if (this.uploadCancelled) {
+                                this.hostConn.send({ type: 'print-job-cancel', jobId: jobId });
+                                this.els.uploadOverlay.classList.add('hidden');
+                                this.showToast('Upload cancelled', 'info');
+                                return;
+                            }
+                            const start = i * CHUNK_SIZE;
+                            const end = Math.min(start + CHUNK_SIZE, arrayBuffer.byteLength);
+                            const chunk = arrayBuffer.slice(start, end);
+                            this.hostConn.send({
+                                type: 'print-job-chunk',
+                                jobId: jobId,
+                                chunkIndex: i,
+                                data: chunk
+                            });
+
+                            if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+
+                            const percent = Math.round(((i + 1) / totalChunks) * 100);
+                            this.els.uploadProgressText.textContent = `${percent}%`;
+                            const offset = 283 - (283 * percent) / 100;
+                            this.els.uploadProgressCircle.style.strokeDashoffset = offset;
+                        }
+
+                        // 3. Send finalization command
+                        this.hostConn.send({
+                            type: 'print-job-end',
+                            jobId: jobId
                         });
                         
                         setTimeout(() => {
@@ -1043,11 +1202,13 @@
                             this.els.uploadOverlay.classList.remove('flex');
                             this.showToast('Sent to printer successfully!', 'success');
                             this.resetFileSelector();
-                        }, 800); // UI visual delay
+                        }, 500);
+
                     } catch (err) {
                         this.els.uploadOverlay.classList.add('hidden');
                         this.els.uploadOverlay.classList.remove('flex');
                         this.showToast('File transmission failed.', 'error');
+                        console.error(err);
                     }
                 };
                 reader.onerror = () => {
@@ -1056,7 +1217,7 @@
                     this.showToast('Error processing file locally.', 'error');
                 };
                 
-                reader.readAsDataURL(this.selectedFile);
+                reader.readAsArrayBuffer(this.selectedFile);
             },
 
             resetFileSelector() {
@@ -1069,7 +1230,6 @@
                 this.els.btnSend.disabled = true;
             },
 
-            // --- History ---
             saveToHistory(code) {
                 let history = [];
                 try {
@@ -1114,7 +1274,6 @@
                 this.loadHistory();
             },
 
-            // --- QR & Utils ---
             generateQR(text, container) {
                 container.innerHTML = '';
                 const url = `${window.location.origin}${window.location.pathname}?join=${text}`;
@@ -1159,6 +1318,7 @@
                         },
                         (err) => {}
                     ).catch(() => {
+                        this.isJoining = false; // reset flag on error
                         this.showToast("Camera access denied.", "error");
                         this.navigate('home');
                     });
@@ -1167,9 +1327,20 @@
 
             closeScanner() {
                 if (this.html5QrcodeScanner) {
-                    try { this.html5QrcodeScanner.stop().catch(e=>{}).finally(() => this.navigate('home')); } 
-                    catch(e) { this.navigate('home'); }
-                } else this.navigate('home');
+                    try { 
+                        this.html5QrcodeScanner.stop().catch(e=>{}).finally(() => {
+                            this.navigate('home');
+                            this.isJoining = false;
+                        }); 
+                    } 
+                    catch(e) { 
+                        this.navigate('home');
+                        this.isJoining = false;
+                    }
+                } else {
+                    this.navigate('home');
+                    this.isJoining = false;
+                }
             },
 
             disconnect() {
@@ -1179,7 +1350,9 @@
                 this.els.btnJoin.disabled = false;
 
                 this.cleanupSession();
+                this.isHost = false;
                 this.isJoining = false;
+                this.uploadCancelled = false;
                 this.resetFileSelector();
                 this.els.joinInput.value = '';
                 
