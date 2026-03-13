@@ -160,13 +160,16 @@
         .spot-primary { top: -10%; left: -5%; width: 40vw; height: 40vw; background: #1e3a8a; animation: blob 15s infinite alternate; }
         .spot-accent { bottom: -10%; right: -5%; width: 35vw; height: 35vw; background: #134e4a; animation: blob 12s infinite alternate-reverse; }
 
-        /* Print iframe hide */
+        /* Print iframe hide - Fixed for Browser Print Bugs */
         .print-frame {
             position: absolute;
-            width: 0;
-            height: 0;
+            width: 1px;
+            height: 1px;
+            left: -9999px;
+            top: -9999px;
             border: 0;
-            visibility: hidden;
+            opacity: 0;
+            z-index: -9999;
         }
     </style>
 </head>
@@ -854,23 +857,31 @@
                 const filterStyle = isBW ? 'filter: grayscale(100%); -webkit-filter: grayscale(100%);' : '';
 
                 if (isPDF) {
-                    // Modern browsers handle base64 PDFs well in iframes
-                    iframe.src = data.fileData;
-                    // Note: Chrome PDF viewer ignores CSS filters for internal plugins, 
-                    // so B&W PDF relies heavily on printer default. Images can be forced to B&W via CSS.
-                    if (isBW) iframe.style.filter = "grayscale(100%)"; 
+                    // Fetch the Base64 Data URL and convert to a local Object URL.
+                    // This bypasses strict cross-origin policies on 'data:' URIs in modern browsers!
+                    fetch(data.fileData)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const blobUrl = URL.createObjectURL(blob);
+                            iframe.src = blobUrl;
+                            if (isBW) iframe.style.filter = "grayscale(100%)"; 
 
-                    iframe.onload = () => {
-                        setTimeout(() => {
-                            try {
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                            } catch (e) {
-                                console.error('Print trigger failed', e);
-                                this.showToast('Browser blocked auto-print. Ensure pop-ups/scripts are allowed.', 'error');
-                            }
-                        }, 800); // Give PDF renderer time
-                    };
+                            // Hard timeout for PDFs as iframe.onload is unreliable for PDF plugins in Chrome/Webview
+                            setTimeout(() => {
+                                try {
+                                    iframe.contentWindow.focus();
+                                    iframe.contentWindow.print();
+                                    // Clean up blob URL after printing
+                                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                                } catch (e) {
+                                    console.error('Print trigger failed', e);
+                                    this.showToast('Browser blocked auto-print. Check browser security settings.', 'error');
+                                }
+                            }, 1500); // 1.5 seconds gives the local blob time to render
+                        }).catch(e => {
+                            console.error(e);
+                            this.showToast('Failed to process PDF for printing.', 'error');
+                        });
                 } else if (isImage) {
                     const img = new Image();
                     img.src = data.fileData;
