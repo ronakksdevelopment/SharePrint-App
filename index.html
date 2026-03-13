@@ -472,10 +472,19 @@
                 </div>
                 
                 <!-- Uploading Overlay -->
-                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/90 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
-                    <div class="w-20 h-20 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin mb-6"></div>
-                    <h3 class="text-xl font-bold text-white mb-2">Transmitting to Host...</h3>
-                    <p class="text-slate-400 text-sm font-medium">Please wait</p>
+                <div id="upload-overlay" class="absolute inset-0 bg-brand-dark/95 backdrop-blur-md z-30 hidden flex-col items-center justify-center transition-opacity">
+                    <!-- Progress Circle -->
+                    <div class="relative w-24 h-24 mb-6">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+                            <circle id="upload-progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" class="transition-all duration-200"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="upload-progress-text" class="text-xl font-bold text-white">0%</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Transmitting File...</h3>
+                    <p class="text-slate-400 text-sm font-medium">Please keep the app open</p>
                 </div>
             </div>
         </section>
@@ -489,7 +498,7 @@
                 Developed With <span class="text-red-500 animate-pulse text-base leading-none">❤️</span> By ROnakks Development & Gemini AI
             </p>
             <p class="text-[11px] text-slate-500 font-medium tracking-wide">
-                Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>.
+                Open source and available on <a href="https://github.com/ronakksdevelopment/SharePrint-App" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:text-brand-300 transition-colors underline decoration-brand-400/30 underline-offset-2">GitHub</a>. Contributions welcome!
             </p>
         </div>
     </footer>
@@ -498,15 +507,16 @@
     <script>
         const app = {
             peer: null,
-            connections: new Map(), // Host tracks multiple connections
+            connections: new Map(), // Host tracks multiple connections using unique Device IDs
+            incomingJobs: {}, // Host tracking chunked files
             hostConn: null, // Client tracks connection to host
             currentSessionId: null,
             isHost: false,
             userName: '', 
+            deviceId: '', // Unique persistent ID to prevent duplicates
             isJoining: false,
             
             selectedFile: null,
-            // Added colorMode to default settings
             printSettings: { orientation: 'portrait', colorMode: 'color', paperSize: 'A4' },
             printQueueCount: 0,
             
@@ -560,6 +570,8 @@
                 fileSize: document.getElementById('selected-file-size'),
                 btnSend: document.getElementById('btn-send-print'),
                 uploadOverlay: document.getElementById('upload-overlay'),
+                uploadProgressText: document.getElementById('upload-progress-text'),
+                uploadProgressCircle: document.getElementById('upload-progress-circle'),
                 
                 // History
                 recentContainer: document.getElementById('recent-sessions-container'),
@@ -571,6 +583,13 @@
             },
 
             init() {
+                // Initialize unique Device ID to prevent double-connections on drops
+                this.deviceId = localStorage.getItem('shareprint_device_id');
+                if (!this.deviceId) {
+                    this.deviceId = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+                    localStorage.setItem('shareprint_device_id', this.deviceId);
+                }
+
                 this.loadHistory();
                 
                 // Load saved nickname
@@ -690,6 +709,7 @@
             cleanupSession() {
                 this.connections.forEach(c => c.close());
                 this.connections.clear();
+                this.incomingJobs = {};
                 if (this.hostConn) this.hostConn.close();
                 if (this.peer) {
                     this.peer.destroy();
@@ -715,7 +735,6 @@
                 this.els.btnCreate.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Server...';
                 this.els.btnCreate.disabled = true;
 
-                // Simulate Hardware Detection UX
                 this.els.detectedPrinter.textContent = "Scanning hardware ports...";
                 this.els.printerIcon.className = "fas fa-spinner fa-spin";
                 
@@ -733,7 +752,6 @@
                     this.updateConnectionBadge();
                     this.showToast("Print Server Active.", "success");
 
-                    // Resolve Hardware simulation
                     setTimeout(() => {
                         const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
                         this.els.detectedPrinter.textContent = isMobile ? "OTG Mobile Print Service" : "System Default OS Printer";
@@ -745,31 +763,63 @@
 
                 this.peer.on('connection', (conn) => {
                     conn.on('open', () => {
+                        // Deduplication Logic using Device ID
+                        const clientDeviceId = (conn.metadata && conn.metadata.deviceId) || conn.peer;
                         const clientName = (conn.metadata && conn.metadata.name) || 'Unknown Device';
+                        
+                        // If this exact device is already connected, remove the old dead connection
+                        if (this.connections.has(clientDeviceId)) {
+                            this.connections.get(clientDeviceId).close();
+                        }
+                        
                         conn.customName = clientName;
-                        this.connections.set(conn.peer, conn);
+                        conn.clientDeviceId = clientDeviceId;
+                        this.connections.set(clientDeviceId, conn);
+                        
                         this.updateHostDeviceList();
                         this.showToast(`${clientName} linked to printer`, "success");
                         conn.send({ type: 'welcome', hostName: this.userName });
                     });
 
                     conn.on('data', (payload) => {
-                        if (payload.type === 'print-job') {
-                            this.handleIncomingPrintJob(conn.customName, payload);
+                        // Chunked File Transfer Logic Receiver
+                        if (payload.type === 'print-job-start') {
+                            this.incomingJobs[payload.jobId] = {
+                                ...payload,
+                                chunks: new Array(payload.totalChunks),
+                                receivedCount: 0
+                            };
+                        } else if (payload.type === 'print-job-chunk') {
+                            const job = this.incomingJobs[payload.jobId];
+                            if (job) {
+                                job.chunks[payload.chunkIndex] = payload.data;
+                                job.receivedCount++;
+                            }
+                        } else if (payload.type === 'print-job-end') {
+                            const job = this.incomingJobs[payload.jobId];
+                            if (job && job.receivedCount === job.totalChunks) {
+                                job.fileData = job.chunks.join('');
+                                this.handleIncomingPrintJob(conn.customName, job);
+                                delete this.incomingJobs[payload.jobId];
+                            } else {
+                                this.showToast('Received corrupted print job.', 'error');
+                            }
                         }
                     });
 
                     conn.on('close', () => {
-                        this.connections.delete(conn.peer);
-                        this.updateHostDeviceList();
-                        this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
+                        if (this.connections.get(conn.clientDeviceId) === conn) {
+                            this.connections.delete(conn.clientDeviceId);
+                            this.updateHostDeviceList();
+                            this.showToast(`${conn.customName || 'A device'} disconnected.`, "info");
+                        }
                     });
                 });
 
                 this.peer.on('error', (err) => {
                     this.els.btnCreate.innerHTML = originalText;
                     this.els.btnCreate.disabled = false;
-                    this.showToast("Server creation failed.", "error");
+                    this.showToast("Server creation failed. Try again.", "error");
                     this.disconnect();
                 });
             },
@@ -798,7 +848,6 @@
                 this.els.devicesList.innerHTML = html;
             },
 
-            // --- Actual Auto-Print Logic (Host) ---
             handleIncomingPrintJob(clientName, data) {
                 this.showToast(`Receiving print job from ${clientName}...`, "success");
                 
@@ -806,7 +855,7 @@
                 this.els.queueCount.textContent = `${this.printQueueCount} Jobs`;
                 
                 if (this.els.queueList.querySelector('.fa-inbox')) {
-                    this.els.queueList.innerHTML = ''; // clear empty state
+                    this.els.queueList.innerHTML = '';
                 }
 
                 const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -836,12 +885,10 @@
                 `;
                 this.els.queueList.prepend(jobCard);
 
-                // EXECUTING THE PRINT
                 this.executeAutoPrint(data);
             },
 
             executeAutoPrint(data) {
-                // Ensure no old frames exist to prevent memory leaks
                 const oldFrames = document.querySelectorAll('.print-frame');
                 oldFrames.forEach(f => f.remove());
 
@@ -852,13 +899,10 @@
                 const isPDF = data.fileType === 'application/pdf';
                 const isImage = data.fileType.startsWith('image/');
 
-                // Apply grayscale CSS filter if Black & White is requested
                 const isBW = data.settings.colorMode === 'bw';
                 const filterStyle = isBW ? 'filter: grayscale(100%); -webkit-filter: grayscale(100%);' : '';
 
                 if (isPDF) {
-                    // Fetch the Base64 Data URL and convert to a local Object URL.
-                    // This bypasses strict cross-origin policies on 'data:' URIs in modern browsers!
                     fetch(data.fileData)
                         .then(res => res.blob())
                         .then(blob => {
@@ -866,18 +910,16 @@
                             iframe.src = blobUrl;
                             if (isBW) iframe.style.filter = "grayscale(100%)"; 
 
-                            // Hard timeout for PDFs as iframe.onload is unreliable for PDF plugins in Chrome/Webview
                             setTimeout(() => {
                                 try {
                                     iframe.contentWindow.focus();
                                     iframe.contentWindow.print();
-                                    // Clean up blob URL after printing
                                     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
                                 } catch (e) {
                                     console.error('Print trigger failed', e);
                                     this.showToast('Browser blocked auto-print. Check browser security settings.', 'error');
                                 }
-                            }, 1500); // 1.5 seconds gives the local blob time to render
+                            }, 1500); 
                         }).catch(e => {
                             console.error(e);
                             this.showToast('Failed to process PDF for printing.', 'error');
@@ -888,7 +930,6 @@
                     img.onload = () => {
                         const doc = iframe.contentWindow.document;
                         doc.open();
-                        // Formatting the document inside the iframe to respect paper size, orientation and color
                         doc.write(`
                             <!DOCTYPE html>
                             <html>
@@ -963,9 +1004,10 @@
 
                 this.peer.on('open', () => {
                     const hostId = `shareprint-net-${code}`;
+                    // Passing deviceId metadata to prevent duplicates
                     this.hostConn = this.peer.connect(hostId, { 
                         reliable: true,
-                        metadata: { name: this.userName }
+                        metadata: { name: this.userName, deviceId: this.deviceId }
                     });
 
                     this.hostConn.on('open', () => {
@@ -1002,7 +1044,7 @@
                 });
             },
 
-            // --- Client File Handling ---
+            // --- Client File Handling & Chunked Transmission ---
             handleFileSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1013,10 +1055,9 @@
                     return;
                 }
 
-                // Strictly limit to PDF and Images for reliable browser auto-printing
                 const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
                 if (!validTypes.includes(file.type)) {
-                    this.showToast('Only PDFs and Images (JPG/PNG) are supported for auto-printing.', 'error');
+                    this.showToast('Only PDFs and Images (JPG/PNG) are supported.', 'error');
                     this.els.fileInput.value = '';
                     return;
                 }
@@ -1072,26 +1113,63 @@
                 }
             },
 
-            sendPrintJob() {
+            async sendPrintJob() {
                 if(!this.selectedFile || !this.hostConn || !this.hostConn.open) {
                     this.showToast('Printer connection lost.', 'error');
                     return;
                 }
 
                 this.printSettings.paperSize = document.getElementById('paper-size').value;
+                
+                // Show Progress UI
+                this.els.uploadProgressText.textContent = "0%";
+                this.els.uploadProgressCircle.style.strokeDashoffset = "283";
                 this.els.uploadOverlay.classList.remove('hidden');
                 this.els.uploadOverlay.classList.add('flex');
 
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     const dataUrl = e.target.result;
+                    
                     try {
+                        const jobId = Math.random().toString(36).substr(2, 9);
+                        const CHUNK_SIZE = 64 * 1024; // Safe 64KB WebRTC Limit
+                        const totalChunks = Math.ceil(dataUrl.length / CHUNK_SIZE);
+
+                        // 1. Send initialization metadata
                         this.hostConn.send({
-                            type: 'print-job',
+                            type: 'print-job-start',
+                            jobId: jobId,
                             fileName: this.selectedFile.name,
                             fileType: this.selectedFile.type,
-                            fileData: dataUrl,
+                            totalChunks: totalChunks,
                             settings: this.printSettings
+                        });
+
+                        // 2. Transmit file in paced chunks
+                        for (let i = 0; i < totalChunks; i++) {
+                            const chunk = dataUrl.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                            this.hostConn.send({
+                                type: 'print-job-chunk',
+                                jobId: jobId,
+                                chunkIndex: i,
+                                data: chunk
+                            });
+
+                            // Yield to event loop every 5 chunks to prevent P2P buffer overflow
+                            if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+
+                            // Update UI Progress
+                            const percent = Math.round(((i + 1) / totalChunks) * 100);
+                            this.els.uploadProgressText.textContent = `${percent}%`;
+                            const offset = 283 - (283 * percent) / 100;
+                            this.els.uploadProgressCircle.style.strokeDashoffset = offset;
+                        }
+
+                        // 3. Send finalization command
+                        this.hostConn.send({
+                            type: 'print-job-end',
+                            jobId: jobId
                         });
                         
                         setTimeout(() => {
@@ -1099,11 +1177,13 @@
                             this.els.uploadOverlay.classList.remove('flex');
                             this.showToast('Sent to printer successfully!', 'success');
                             this.resetFileSelector();
-                        }, 800); // UI visual delay
+                        }, 500);
+
                     } catch (err) {
                         this.els.uploadOverlay.classList.add('hidden');
                         this.els.uploadOverlay.classList.remove('flex');
                         this.showToast('File transmission failed.', 'error');
+                        console.error(err);
                     }
                 };
                 reader.onerror = () => {
